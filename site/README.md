@@ -37,6 +37,29 @@ The Mac app in the browser. [DECISIONS.md](../DECISIONS.md#web-the-core-in-webas
 - The NLT is read live (`src/lib/read/nlt.ts`, `live.svelte.ts`). The translation menu offers it, and the reader asks `/api/nlt?ref=John+3` (`src/routes/api/nlt`, rules in `src/lib/server/nlt.ts`) for the chapter being read. The function calls Tyndale's API with `NLT_API_KEY`, which lives in Vercel's settings and never reaches the browser. The page keeps that one chapter in memory and shows Tyndale's credit line under it. `/read/nlt/<book>/<chapter>` shows the KJV page for the same chapter (`src/hooks.ts`) and isn't indexed. [TRANSLATIONS.md](../TRANSLATIONS.md) has the rules. In development, `NLT_API_KEY=TEST npm run dev` uses the API's anonymous access.
 - Development: `npm run dev`, then <http://localhost:5173/read>. In development the reader takes the Mac's demo steps for screenshots, for example `/read/kjv/john/1?fixture&settings={"theme":"dark"}&demo=jump:jn 3:16;select:jn 3:16` (`src/lib/read/demo.ts`): `fixture` loads sample highlights, notes and bookmarks, `settings` overrides settings, and `demo` runs steps in order. `window.readApp` is the app.
 
+## Passage study MVP
+
+Select up to 30 verses in one chapter and choose **Go deeper** from the verse menu or touch
+highlight bar. `/api/study` returns the World English Bible passage and paragraph, passage-linked
+Aquifer notes, STEPBible tagged words, a small reviewed historic commentary set, and reviewed
+YouTube links. The panel keeps text, historical claims, language, interpretations, videos, and
+uncertainty in distinct sections. A user's OpenAI API key enables cited summaries and follow-up
+questions; it is kept in tab memory only and sent to `/api/study` for the request, not persisted.
+
+Optional server environment variables:
+
+| Variable | Purpose |
+|---|---|
+| `EXA_API_KEY` | Discover additional links from an approved domain list. Search runs only when both Upstash variables below are set; per-reader and global daily limits apply. |
+| `YOUTUBE_API_KEY` | Refresh title, channel, and public availability for reviewed video IDs using YouTube Data API `videos.list` when Upstash is configured and its global daily limit allows it. Otherwise the reviewed manifest is shown. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Durable study and site-funded discovery limits. Without them, a local instance limit applies and Exa discovery is disabled. |
+
+To rebuild the licensed data shards from pinned revisions, run
+`python3 scripts/build-study-data.py` in this directory. See [data provenance](../LICENSES/README.md#web-passage-study-data).
+
+The MVP has sparse reviewed video and historic commentary coverage. It does not summarize video
+audio or claim a transcript exists. STORM-style background research is outside this first release.
+
 ## Objects in 3D (`/ark-of-the-covenant`)
 
 - The Ark of the Covenant, built from its spec in `../objects/ark.json` ([objects/README.md](../objects/README.md)): every size, the verse it comes from, and whether the text gives it or the model chooses it. `src/lib/objects/check.mjs` checks the spec against the core's KJV and BSB while the page prerenders, so a wrong reference or quote stops the build; `node src/lib/objects/check.mjs` runs the same check on its own (CI does).

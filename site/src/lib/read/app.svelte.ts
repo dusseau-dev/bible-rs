@@ -53,6 +53,7 @@ import {
 	type Theme
 } from './settings';
 import { dayStart } from './time';
+import type { StudyPassage } from './study';
 
 export type Page = 'reader' | 'translations' | 'bookmarks' | 'highlights' | 'notes' | 'history' | 'plans';
 export type SettingsTab = 'reading' | 'appearance' | 'translations' | 'shortcuts' | 'data' | 'about';
@@ -115,6 +116,7 @@ export type Action =
 	| { type: 'copy' }
 	| { type: 'openVerseMenu'; x: number; y: number }
 	| { type: 'shareImage' }
+	| { type: 'goDeeper' }
 	| { type: 'compare' }
 	| { type: 'clearSelection' }
 	| { type: 'selectNext' }
@@ -242,6 +244,7 @@ export class ReadApp {
 	compare = $state.raw<VerseRef | null>(null);
 	panel = $state.raw<VerseRef | null>(null);
 	share = $state.raw<VerseRef[] | null>(null);
+	studyPassage = $state.raw<StudyPassage | null>(null);
 	importSheet = $state(false);
 	textPopover = $state(false);
 	focus = $state(false);
@@ -1199,6 +1202,24 @@ export class ReadApp {
 			case 'shareImage': {
 				const refs = this.selectedRefs();
 				if (refs.length) this.share = refs;
+				break;
+			}
+			case 'goDeeper': {
+				if (this.selection && (this.selection[0].book !== this.selection[1].book || this.selection[0].chapter !== this.selection[1].chapter)) {
+					this.toastNow('Choose verses within one chapter to go deeper');
+					break;
+				}
+				const refs = this.selectedRefs();
+				if (refs.length > 30) {
+					this.toastNow('Go deeper supports up to 30 verses at a time');
+					break;
+				}
+				if (refs.length) this.studyPassage = {
+					book: refs[0].book,
+					chapter: refs[0].chapter,
+					firstVerse: refs[0].verse,
+					lastVerse: refs[refs.length - 1].verse
+				};
 				break;
 			}
 			case 'compare': {

@@ -43,6 +43,7 @@
 		>
 			<Icon name="slash-circle" size={22} />
 		</button>
+		<button type="button" class="deeper" onclick={() => app.dispatch({ type: 'goDeeper' })}>Go deeper</button>
 	</div>
 </Popover>
 
@@ -83,5 +84,14 @@
 
 	.clear {
 		color: var(--ink-3);
+	}
+
+	.deeper {
+		padding: 5px 9px;
+		border-radius: 12px;
+		background: var(--fill-strong);
+		color: var(--ink);
+		font-size: 12px;
+		white-space: nowrap;
 	}
 </style>

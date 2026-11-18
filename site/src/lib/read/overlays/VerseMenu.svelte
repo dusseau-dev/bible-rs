@@ -83,6 +83,8 @@
 		onclick={() => run({ type: 'toggleBookmark' })}
 	/>
 	<MenuSeparator />
+	<MenuItem icon="search" label="Go deeper…" onclick={() => run({ type: 'goDeeper' })} />
+	<MenuSeparator />
 	<MenuItem icon="copy" label="Copy" shortcut={cmdText('C')} onclick={() => run({ type: 'copyText' })} />
 	<MenuItem icon="quote" label="Copy with Reference" shortcut={keys('copy')} onclick={() => run({ type: 'copy' })} />
 	<MenuItem icon="share" label="Share as Image…" onclick={() => run({ type: 'shareImage' })} />
