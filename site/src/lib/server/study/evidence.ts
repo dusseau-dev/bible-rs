@@ -105,6 +105,19 @@ export async function localEvidence(p: StudyPassage): Promise<{
 		.sort((a, b) => Number(b.direct) - Number(a.direct) || a.width - b.width)
 		.slice(0, 8);
 	const sources: StudySource[] = [bibleSource];
+	if (p.book === 0 && p.chapter === 3 && p.firstVerse <= 21 && p.lastVerse >= 7) {
+		const romansIndex = BOOKS[44].firstChapter + 4;
+		const romans = c.verses('web', romansIndex);
+		const excerpt = [12, 18, 19].map((number) => {
+			const verse = romans.find((item) => item.number === number);
+			return verse ? `${number} ${verse.runs.map((run) => run.text).join('')}` : '';
+		}).filter(Boolean).join('\n');
+		sources.push({
+			id: 'bible:web:romans:5', title: 'Romans 5:12, 18–19 · World English Bible', author: 'World English Bible',
+			kind: 'scripture', tradition: null, scope: 'related', url: '/read/web/romans/5',
+			location: 'Romans 5:12, 18–19', license: 'Public domain', excerpt
+		});
+	}
 	for (const { n, direct } of notes) {
 		sources.push({
 			id: `aosn:${n.id}`,

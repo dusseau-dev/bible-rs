@@ -20,6 +20,18 @@ describe('generated claim validation', () => {
 		expect(out.answer).toBeNull();
 	});
 
+	it('keeps reading prompts while rejecting an uncited Christ connection', () => {
+		const out = validateGenerated({
+			claims: [], answer: { text: '', sourceIds: [] },
+			guide: [
+				{ id: 'observe', answer: 'The verse names fig leaves.', sourceIds: ['text'] },
+				{ id: 'christ', answer: 'This directly predicts the cross.', sourceIds: ['text'], connection: 'explicit' }
+			]
+		}, sources);
+		expect(out.guide[0].answer).toBe('The verse names fig leaves.');
+		expect(out.guide[3].answer).toBeNull();
+	});
+
 	it('requests a non-stored structured answer and accepts only cited output', async () => {
 		const mock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
 			output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({

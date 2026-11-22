@@ -7,6 +7,7 @@ export interface StudyPassage {
 }
 
 export type StudyLayer = 'text' | 'history' | 'language' | 'interpretation' | 'uncertainty';
+export type StudyStepId = 'observe' | 'contextualize' | 'trace' | 'christ' | 'apply';
 export type Tradition = 'protestant' | 'catholic' | 'orthodox' | 'jewish' | null;
 export type EvidenceScope = 'direct' | 'context' | 'related';
 
@@ -48,6 +49,23 @@ export interface StudyVideo {
 	verification: 'video link only';
 }
 
+export interface StudyGuideStep {
+	id: StudyStepId;
+	question: string;
+	answer: string | null;
+	sourceIds: string[];
+	connection?: 'explicit' | 'allusion' | 'theme';
+}
+
+export interface StudyTestimonial {
+	id: string;
+	title: string;
+	author: string;
+	url: string;
+	scope: 'direct' | 'related';
+	theme?: string;
+}
+
 export interface StudyResult {
 	reference: string;
 	passageText: string;
@@ -56,13 +74,15 @@ export interface StudyResult {
 	terms: StudyTerm[];
 	claims: StudyClaim[];
 	videos: StudyVideo[];
+	guide: StudyGuideStep[];
+	testimonials: StudyTestimonial[];
 	answer: { text: string; sourceIds: string[] } | null;
 	message?: string;
 }
 
 export interface StudyRequest {
 	passage: StudyPassage;
-	mode: 'open' | 'ask';
+	mode: 'open' | 'ask' | 'explain';
 	question?: string;
 	style: 'standard' | 'simple';
 	openaiKey?: string;

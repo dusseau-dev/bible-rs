@@ -80,3 +80,7 @@ The panel links each displayed excerpt to its source and shows its license. Matt
 historic commentary is linked from CCEL; its original text is public domain, and the panel's
 brief descriptions of his views are newly written. External search results are linked, not
 bundled. YouTube cards contain links and public metadata only; no video or transcript is stored.
+The Testimonials tab shows outbound links and public metadata from
+[Christian Forums at Crosswalk](https://forums.crosswalk.com/), including one reviewed Genesis 3
+link. Forum post bodies are neither bundled nor sent to the AI summary service. The forum's
+[terms](https://forums.crosswalk.com/tos) do not state a third-party republication license.

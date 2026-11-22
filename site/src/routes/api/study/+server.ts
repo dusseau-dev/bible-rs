@@ -5,6 +5,8 @@ import { generateStudy } from '#lib/server/study/answer.js';
 import { localEvidence, passageFrom, passageLabel, passageVideos, verifiedPassageVideos } from '#lib/server/study/evidence.js';
 import { allowDiscovery, allowStudy, allowVideoRefresh } from '#lib/server/study/limits.js';
 import { discover } from '#lib/server/study/research.js';
+import { buildGuide } from '#lib/server/study/guide.js';
+import { discoverTestimonials, mergeTestimonials, reviewedTestimonials } from '#lib/server/study/community.js';
 
 export const prerender = false;
 
@@ -24,7 +26,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		return fail(400, 'Invalid request');
 	}
 	const passage = passageFrom(input?.passage);
-	if (!passage || !['open', 'ask'].includes(input.mode ?? '') || !['standard', 'simple'].includes(input.style ?? ''))
+	if (!passage || !['open', 'ask', 'explain'].includes(input.mode ?? '') || !['standard', 'simple'].includes(input.style ?? ''))
 		return fail(400, 'Invalid passage or study option');
 	if (input.openaiKey !== undefined && (typeof input.openaiKey !== 'string' || input.openaiKey.length > 256))
 		return fail(400, 'Invalid API key');
@@ -51,12 +53,15 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		terms: local.terms,
 		claims: [],
 		videos: await verifiedPassageVideos(passage, refreshVideo ? youtubeKey : undefined),
+		guide: buildGuide([], local.sources),
+		testimonials: reviewedTestimonials(passage),
 		answer: null
 	};
 	const exaKey = process.env.EXA_API_KEY?.trim();
 	if (exaKey && await allowDiscovery(client)) {
-		try { result.sources.push(...await discover(passage, exaKey)); }
-		catch { /* Local evidence remains available when discovery is down. */ }
+		const [research, community] = await Promise.allSettled([discover(passage, exaKey), discoverTestimonials(passage, exaKey)]);
+		if (research.status === 'fulfilled') result.sources.push(...research.value);
+		if (community.status === 'fulfilled') result.testimonials = mergeTestimonials(result.testimonials, community.value);
 	}
 	const openaiKey = input.openaiKey?.trim();
 	if (openaiKey) {
@@ -67,11 +72,12 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 				sources: result.sources,
 				terms: local.terms,
 				style: input.style!,
-				question: input.mode === 'ask' ? input.question?.trim() : undefined,
+					question: input.mode === 'ask' ? input.question?.trim() : input.mode === 'explain' ? 'Explain this passage using the reading path and its cited evidence.' : undefined,
 				key: openaiKey
 			});
 			result.claims = generated.claims;
 			result.answer = generated.answer;
+			result.guide = generated.guide;
 		} catch (error) {
 			result.message = error instanceof Error ? error.message : 'The AI summary is unavailable right now';
 		}

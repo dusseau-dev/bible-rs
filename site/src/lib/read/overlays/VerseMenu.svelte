@@ -9,7 +9,7 @@
 	import { Icon, Menu, MenuHeader, MenuItem, MenuSeparator } from '../ui';
 	import { pointRect } from '../ui/float';
 
-	const WIDTH = 264;
+	const WIDTH = 306;
 
 	const app = getApp();
 	const at = app.verseMenu!;
@@ -22,7 +22,7 @@
 	const current = $derived(app.selectionColor());
 	const keys = (id: string) => shortcutText(id, app.settings.shortcuts);
 
-	const close = () => (app.verseMenu = null);
+	const close = () => { app.selectionMore = false; app.verseMenu = null; };
 	const run = (a: Parameters<typeof app.dispatch>[0]) => {
 		close();
 		app.dispatch(a);
@@ -40,6 +40,7 @@
 	width={WIDTH}
 	onclose={close}
 	label="Verse"
+	class="selection-overflow"
 	highlight={app.demo.menu === 'first' ? 0 : undefined}
 >
 	<MenuHeader label="Highlight" />
@@ -83,7 +84,7 @@
 		onclick={() => run({ type: 'toggleBookmark' })}
 	/>
 	<MenuSeparator />
-	<MenuItem icon="search" label="Go deeper…" onclick={() => run({ type: 'goDeeper' })} />
+	<button type="button" class="feature-item" role="menuitem" tabindex="-1" onclick={() => run({ type: 'goDeeper' })}><Icon name="search" size={18} /><span><strong>Go deeper</strong><small>History, scholarship, stories &amp; video</small></span></button>
 	<MenuSeparator />
 	<MenuItem icon="copy" label="Copy" shortcut={cmdText('C')} onclick={() => run({ type: 'copyText' })} />
 	<MenuItem icon="quote" label="Copy with Reference" shortcut={keys('copy')} onclick={() => run({ type: 'copy' })} />
@@ -96,6 +97,12 @@
 </Menu>
 
 <style>
+	:global(.selection-overflow) { --surface:#eee8dc; --ink:#263442; --ink-2:#52616a; --ink-3:#64716e; --separator:#c8c3b8; --fill-strong:#dce5dc; background:#eee8dc !important; border:1px solid #d6d1c4; }
+	.feature-item { display:flex; align-items:center; gap:12px; width:100%; padding:9px var(--menu-item-padding); border-radius:9px; color:var(--ink); text-align:left; }
+	.feature-item:hover,.feature-item:focus-visible { background:#dce5dc; outline:none; }
+	.feature-item span { display:grid; gap:2px; }
+	.feature-item strong { font-size:13px; font-weight:600; }
+	.feature-item small { font-size:11px; color:#596a70; }
 	/* 20 pt swatches 10 apart, 6 above and 8 below, from the text column. */
 	.swatches {
 		display: flex;

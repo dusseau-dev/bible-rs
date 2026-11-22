@@ -39,12 +39,16 @@ The Mac app in the browser. [DECISIONS.md](../DECISIONS.md#web-the-core-in-webas
 
 ## Passage study MVP
 
-Select up to 30 verses in one chapter and choose **Go deeper** from the verse menu or touch
-highlight bar. `/api/study` returns the World English Bible passage and paragraph, passage-linked
-Aquifer notes, STEPBible tagged words, a small reviewed historic commentary set, and reviewed
-YouTube links. The panel keeps text, historical claims, language, interpretations, videos, and
-uncertainty in distinct sections. A user's OpenAI API key enables cited summaries and follow-up
-questions; it is kept in tab memory only and sent to `/api/study` for the request, not persisted.
+Select words or up to 30 verses in one chapter. The selection toolbar offers **Ask**, **Explain**,
+**Simplify**, highlighting, notes, and the existing reader actions in its overflow menu. **Go deeper**
+opens a side folio (a bottom sheet on phones) with an Observe → Contextualize → Trace → Connect to
+Christ → Apply reading path and History, Academic, Testimonials, and Videos tabs. `/api/study`
+returns the World English Bible passage and paragraph, passage-linked Aquifer notes, STEPBible
+tagged words, a small reviewed historic commentary set, and reviewed YouTube links. The panel
+keeps text, historical claims, language, interpretations, videos, and uncertainty in distinct
+sections. Testimonials are link-only public forum stories, with exact passage matches before
+reviewed related themes. A user's OpenAI API key enables cited summaries and follow-up questions;
+it is kept in tab memory only and sent to `/api/study` for the request, not persisted.
 
 Optional server environment variables:
 

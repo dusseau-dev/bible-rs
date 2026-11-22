@@ -26,8 +26,9 @@
 	import Pages from './pages/Pages.svelte';
 	import Palette from './overlays/Palette.svelte';
 	import VerseMenu from './overlays/VerseMenu.svelte';
-	import HighlightBar from './overlays/HighlightBar.svelte';
-	import StudyPanel from './overlays/StudyPanel.svelte';
+	import SelectionToolbar from './overlays/SelectionToolbar.svelte';
+	import QuickStudy from './overlays/QuickStudy.svelte';
+	import ScholarlyFolio from './overlays/ScholarlyFolio.svelte';
 	import NotePopover from './overlays/NotePopover.svelte';
 	import ComparePopover from './overlays/ComparePopover.svelte';
 	import VersePanel from './overlays/VersePanel.svelte';
@@ -312,7 +313,7 @@
 			<Sidebar />
 		</aside>
 		<main class="main" style:--left="{sidebarShown ? sidebarExtent : 0}px">
-			<div class="reading" style:right="{app.panel && app.page === 'reader' ? INSPECTOR : 0}px">
+			<div class="reading" style:right="{app.studyPassage && !phone ? 420 : app.panel && app.page === 'reader' ? INSPECTOR : 0}px">
 				<Reader top={chrome + PAGE_TOP} {chrome} covered={app.page !== 'reader'} />
 				{#if app.page === 'reader' && band > 0}
 					<div class="bands" style:height="{TOOLBAR + band}px"></div>
@@ -339,12 +340,13 @@
 		</main>
 		{#if app.note}{#key app.note}<NotePopover />{/key}{/if}
 		{#if app.compare}<ComparePopover />{/if}
-		{#if app.verseMenu}<VerseMenu />{/if}
-		{#if app.touch && app.selection && app.page === 'reader' && !app.verseMenu && !app.note && !app.studyPassage}<HighlightBar />{/if}
+		{#if app.selectionMore && app.verseMenu}<VerseMenu />{/if}
+		{#if (app.verseMenu || (app.touch && app.selection && app.page === 'reader')) && !app.selectionMore && !app.note && !app.studyPassage && !app.selectionAction}<SelectionToolbar />{/if}
+		{#if app.selectionAction && app.selection && app.page === 'reader'}<QuickStudy />{/if}
 		{#if app.palette}<Palette />{/if}
 		{#if app.settingsTab}<SettingsSheet />{/if}
 		{#if app.share}<ShareSheet />{/if}
-		{#if app.studyPassage}<StudyPanel />{/if}
+		{#if app.studyPassage}<ScholarlyFolio />{/if}
 		{#if app.importSheet}<ImportSheet />{/if}
 		{#if app.shortcuts}<ShortcutsOverlay />{/if}
 		<PageLinks />

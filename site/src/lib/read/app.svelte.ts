@@ -225,7 +225,7 @@ export class ReadApp {
 	/** Words chosen in the reader (a text selection) and their parallel column; the verses they
 	 *  touch are the selection, and they go when it changes to anything else. */
 	words = $state.raw<Words | null>(null);
-	/** The reader was last pressed by touch (or a pen): the highlight bar shows for its selection. */
+	/** The reader was last pressed by touch (or a pen): show the passage toolbar for its selection. */
 	touch = $state(false);
 	/** Chosen words kept while the pointer is pressed outside the text (a menu, the highlight bar),
 	 *  which may take the page's selection away. */
@@ -238,6 +238,8 @@ export class ReadApp {
 	settingsTab = $state<SettingsTab | null>(null);
 	shortcuts = $state(false);
 	verseMenu = $state.raw<{ x: number; y: number } | null>(null);
+	selectionMore = $state(false);
+	selectionAction = $state<'ask' | 'explain' | 'simplify' | null>(null);
 	/** The verse whose note popover is open. */
 	note = $state.raw<VerseRef | null>(null);
 	/** Compare as a popover on the selected verse, or as the inspector beside parallel columns. */
@@ -1197,7 +1199,11 @@ export class ReadApp {
 				break;
 			}
 			case 'openVerseMenu':
-				if (this.selectedRefs().length) this.verseMenu = { x: a.x, y: a.y };
+				if (this.selectedRefs().length) {
+					this.selectionAction = null;
+					this.selectionMore = false;
+					this.verseMenu = { x: a.x, y: a.y };
+				}
 				break;
 			case 'shareImage': {
 				const refs = this.selectedRefs();
