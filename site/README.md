@@ -44,25 +44,34 @@ Select words or up to 30 verses in one chapter. The selection toolbar offers **A
 opens a side folio (a bottom sheet on phones) with an Observe → Contextualize → Trace → Connect to
 Christ → Apply reading path and History, Academic, Testimonials, and Videos tabs. `/api/study`
 returns the World English Bible passage and paragraph, passage-linked Aquifer notes, STEPBible
-tagged words, a small reviewed historic commentary set, and reviewed YouTube links. The panel
-keeps text, historical claims, language, interpretations, videos, and uncertainty in distinct
-sections. Testimonials are link-only public forum stories, with exact passage matches before
-reviewed related themes. A user's OpenAI API key enables cited summaries and follow-up questions;
-it is kept in tab memory only and sent to `/api/study` for the request, not persisted.
+tagged words, a small reviewed historic commentary set, museum-linked historical records,
+open-access paper metadata, and YouTube links. History separates documented artifacts from
+generated claims; a contextual artifact does not verify every detail of the biblical account.
+Academic shows journal articles, reports, preprints, dissertations, and book chapters as linked
+publication metadata, not as conclusions ingested by the model. Videos can be filtered into
+short clips (under four minutes) and full videos (four minutes or longer); search results are
+matched from YouTube metadata, not transcripts. Testimonials are link-only public forum stories,
+with exact passage matches before reviewed related themes. A user's OpenAI API key enables cited summaries and follow-up questions;
+when entered in the panel, it is kept in tab memory only and sent to `/api/study` for the request,
+not persisted. For local development, `OPENAI_API_KEY` in the gitignored `.env.development.local`
+is used when the panel key is empty; restart the dev server after changing the file. This fallback
+is disabled in production.
 
 Optional server environment variables:
 
 | Variable | Purpose |
 |---|---|
 | `EXA_API_KEY` | Discover additional links from an approved domain list. Search runs only when both Upstash variables below are set; per-reader and global daily limits apply. |
-| `YOUTUBE_API_KEY` | Refresh title, channel, and public availability for reviewed video IDs using YouTube Data API `videos.list` when Upstash is configured and its global daily limit allows it. Otherwise the reviewed manifest is shown. |
+| `YOUTUBE_API_KEY` | Refresh reviewed video metadata and, with Upstash configured, search YouTube for passage-matched short and full videos. Results are cached for seven days. Search has per-reader and global daily limits. |
+| `OPENALEX_API_KEY` | With Upstash configured, find open-access scholarly publication metadata through OpenAlex. Results are cached for seven days; no paper body is stored or sent to OpenAI. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Durable study and site-funded discovery limits. Without them, a local instance limit applies and Exa discovery is disabled. |
 
 To rebuild the licensed data shards from pinned revisions, run
 `python3 scripts/build-study-data.py` in this directory. See [data provenance](../LICENSES/README.md#web-passage-study-data).
 
-The MVP has sparse reviewed video and historic commentary coverage. It does not summarize video
-audio or claim a transcript exists. STORM-style background research is outside this first release.
+The reviewed video, paper, archaeology, and historic commentary sets are sparse. YouTube and
+OpenAlex searches add coverage when configured, but neither supplies a verified interpretation of
+the passage. The app does not summarize video audio or claim a transcript exists.
 
 ## Objects in 3D (`/ark-of-the-covenant`)
 

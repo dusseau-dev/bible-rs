@@ -78,6 +78,7 @@ export function validateGenerated(generated: Generated, sources: StudySource[]):
 function evidenceForModel(sources: StudySource[]): StudySource[] {
 	return [
 		...sources.filter((s) => s.kind === 'scripture').slice(0, 3),
+		...sources.filter((s) => s.kind === 'historical_record').slice(0, 3),
 		...sources.filter((s) => s.kind === 'study_note').slice(0, 5),
 		...sources.filter((s) => (s.kind === 'academic' || s.kind === 'commentary') && s.excerpt.length > 20).slice(0, 5),
 		...sources.filter((s) => s.kind === 'language_data').slice(0, 6)

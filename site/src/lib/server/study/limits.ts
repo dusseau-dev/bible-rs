@@ -10,6 +10,10 @@ const perReader = redis && new Ratelimit({ redis, limiter: Ratelimit.slidingWind
 const discoveryReader = redis && new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, '1 d'), prefix: 'bible:study:discovery' });
 const discoveryGlobal = redis && new Ratelimit({ redis, limiter: Ratelimit.fixedWindow(100, '1 d'), prefix: 'bible:study:discovery-total' });
 const videoGlobal = redis && new Ratelimit({ redis, limiter: Ratelimit.fixedWindow(200, '1 d'), prefix: 'bible:study:video-total' });
+const videoSearchReader = redis && new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, '1 d'), prefix: 'bible:study:video-search-reader' });
+const videoSearchGlobal = redis && new Ratelimit({ redis, limiter: Ratelimit.fixedWindow(40, '1 d'), prefix: 'bible:study:video-search-total' });
+const paperReader = redis && new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, '1 d'), prefix: 'bible:study:paper-reader' });
+const paperGlobal = redis && new Ratelimit({ redis, limiter: Ratelimit.fixedWindow(300, '1 d'), prefix: 'bible:study:paper-total' });
 
 function identifier(address: string): string {
 	const day = new Date().toISOString().slice(0, 10);
@@ -45,4 +49,20 @@ export async function allowVideoRefresh(): Promise<boolean> {
 	} catch {
 		return false;
 	}
+}
+
+export async function allowVideoSearch(address: string): Promise<boolean> {
+	if (!videoSearchReader || !videoSearchGlobal) return false;
+	try {
+		if (!(await videoSearchReader.limit(identifier(address))).success) return false;
+		return (await videoSearchGlobal.limit('all')).success;
+	} catch { return false; }
+}
+
+export async function allowPaperSearch(address: string): Promise<boolean> {
+	if (!paperReader || !paperGlobal) return false;
+	try {
+		if (!(await paperReader.limit(identifier(address))).success) return false;
+		return (await paperGlobal.limit('all')).success;
+	} catch { return false; }
 }

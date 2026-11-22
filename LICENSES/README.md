@@ -84,3 +84,9 @@ The Testimonials tab shows outbound links and public metadata from
 [Christian Forums at Crosswalk](https://forums.crosswalk.com/), including one reviewed Genesis 3
 link. Forum post bodies are neither bundled nor sent to the AI summary service. The forum's
 [terms](https://forums.crosswalk.com/tos) do not state a third-party republication license.
+The Academic tab includes outbound metadata links to open-access works indexed by
+[OpenAlex](https://openalex.org/), plus one reviewed Genesis 3 article from Andrews University.
+Paper bodies are not bundled or sent to the AI summary service. The History tab has brief,
+newly written descriptions linking to the [Metropolitan Museum of Art](https://www.metmuseum.org/)
+and [Israel Museum](https://www.imj.org.il/) records; museum images are not bundled. YouTube
+search results use public title, channel, and duration metadata only.

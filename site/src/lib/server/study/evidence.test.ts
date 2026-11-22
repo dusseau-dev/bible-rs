@@ -24,5 +24,6 @@ describe('passage study evidence', () => {
 		expect(found).toHaveLength(2);
 		expect(found.every((video) => video.scope === 'direct' && video.verification === 'video link only')).toBe(true);
 		expect(passageVideos({ book: 42, chapter: 3, firstVerse: 16, lastVerse: 16 })).toEqual([]);
+		expect(passageVideos({ book: 0, chapter: 3, firstVerse: 7, lastVerse: 7 }).map((video) => video.format)).toEqual(['short', 'full']);
 	});
 });

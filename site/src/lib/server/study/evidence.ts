@@ -1,6 +1,8 @@
 import { BOOKS, bookSlug } from '#lib/read/books.js';
 import { chapterVerses, core } from '#lib/read/core.js';
 import type { StudyPassage, StudySource, StudyTerm, StudyVideo, Tradition } from '#lib/read/study.js';
+import { historicalRecordSources } from './historical.js';
+import { durationSeconds } from './youtube.js';
 
 const STEP_REV = '5de0a47f35f0fc13dfe1430d104e5db8a4285f9c';
 const AQUIFER_REV = '35183d839b73958deca66fe4060d4dc7d4dc23de';
@@ -105,6 +107,7 @@ export async function localEvidence(p: StudyPassage): Promise<{
 		.sort((a, b) => Number(b.direct) - Number(a.direct) || a.width - b.width)
 		.slice(0, 8);
 	const sources: StudySource[] = [bibleSource];
+	sources.push(...historicalRecordSources(p));
 	if (p.book === 0 && p.chapter === 3 && p.firstVerse <= 21 && p.lastVerse >= 7) {
 		const romansIndex = BOOKS[44].firstChapter + 4;
 		const romans = c.verses('web', romansIndex);
@@ -219,20 +222,33 @@ const CURATED_LINKS: Array<{
 /** Only reviewed, passage-specific links appear here. They are not transcript evidence. */
 const VIDEOS: Array<StudyVideo & { book: number; chapter: number; firstVerse: number; lastVerse: number }> = [
 	{
+		id: 'jQm8ElP8Kj0', title: 'Bible Thought Genesis 3:6–7', channel: 'The Red Barn Youth Center',
+		url: 'https://www.youtube.com/watch?v=jQm8ElP8Kj0', scope: 'direct', verification: 'video link only',
+		durationSeconds: 165, format: 'short', reviewed: true,
+		book: 0, chapter: 3, firstVerse: 6, lastVerse: 7
+	},
+	{
+		id: 'WTL3mrkoeEI', title: 'Genesis 3: God Covers Sinners with Love', channel: 'Northland Church',
+		url: 'https://www.youtube.com/watch?v=WTL3mrkoeEI', scope: 'context', verification: 'video link only',
+		durationSeconds: 2859, format: 'full', reviewed: true,
+		book: 0, chapter: 3, firstVerse: 1, lastVerse: 24
+	},
+	{
 		id: 'j3zujMWyKPI', title: 'When the Spirit Frees Us to Love', channel: 'Desiring God',
-		url: 'https://www.youtube.com/watch?v=j3zujMWyKPI', scope: 'direct', verification: 'video link only',
+		url: 'https://www.youtube.com/watch?v=j3zujMWyKPI', scope: 'direct', verification: 'video link only', reviewed: true,
 		book: 44, chapter: 8, firstVerse: 1, lastVerse: 4
 	},
 	{
 		id: 'i-EJ-BtdcCk', title: 'Trust Christ, Not Law-Keeping', channel: 'Desiring God',
-		url: 'https://www.youtube.com/watch?v=i-EJ-BtdcCk', scope: 'direct', verification: 'video link only',
+		url: 'https://www.youtube.com/watch?v=i-EJ-BtdcCk', scope: 'direct', verification: 'video link only', reviewed: true,
 		book: 44, chapter: 8, firstVerse: 1, lastVerse: 4
 	}
 ];
 
 export function passageVideos(p: StudyPassage): StudyVideo[] {
 	return VIDEOS.filter((v) => v.book === p.book && v.chapter === p.chapter && v.firstVerse <= p.lastVerse && v.lastVerse >= p.firstVerse)
-		.map(({ id, title, channel, url, scope, verification }) => ({ id, title, channel, url, scope, verification }));
+		.map(({ id, title, channel, url, scope, verification, reviewed, durationSeconds, format }) =>
+			({ id, title, channel, url, scope, verification, reviewed, durationSeconds, format }));
 }
 
 /** Refresh the reviewed links' public metadata when the site's YouTube key is configured. */
@@ -241,17 +257,19 @@ export async function verifiedPassageVideos(p: StudyPassage, key: string | undef
 	if (!key || !videos.length) return videos;
 	try {
 		const url = new URL('https://www.googleapis.com/youtube/v3/videos');
-		url.searchParams.set('part', 'snippet,status');
+		url.searchParams.set('part', 'snippet,contentDetails,status');
 		url.searchParams.set('id', videos.map((video) => video.id).join(','));
 		url.searchParams.set('key', key);
 		const response = await fetch(url, { signal: AbortSignal.timeout(6_000) });
 		if (!response.ok) return videos;
-		const body = await response.json() as { items?: Array<{ id: string; snippet?: { title?: string; channelTitle?: string }; status?: { privacyStatus?: string } }> };
+		const body = await response.json() as { items?: Array<{ id: string; snippet?: { title?: string; channelTitle?: string }; contentDetails?: { duration?: string }; status?: { privacyStatus?: string } }> };
 		const found = new Map((body.items ?? []).map((item) => [item.id, item]));
 		return videos.flatMap((video) => {
 			const item = found.get(video.id);
 			if (!item || item.status?.privacyStatus !== 'public') return [];
-			return [{ ...video, title: item.snippet?.title || video.title, channel: item.snippet?.channelTitle || video.channel }];
+			const duration = durationSeconds(item.contentDetails?.duration);
+			return [{ ...video, title: item.snippet?.title || video.title, channel: item.snippet?.channelTitle || video.channel,
+				...(duration ? { durationSeconds: duration, format: duration < 240 ? 'short' as const : 'full' as const } : {}) }];
 		});
 	} catch {
 		return videos;

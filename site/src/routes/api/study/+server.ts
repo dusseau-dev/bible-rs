@@ -7,6 +7,8 @@ import { allowDiscovery, allowStudy, allowVideoRefresh } from '#lib/server/study
 import { discover } from '#lib/server/study/research.js';
 import { buildGuide } from '#lib/server/study/guide.js';
 import { discoverTestimonials, mergeTestimonials, reviewedTestimonials } from '#lib/server/study/community.js';
+import { passagePapers, reviewedPapers } from '#lib/server/study/academic.js';
+import { discoverPassageVideos, mergeVideos } from '#lib/server/study/youtube.js';
 
 export const prerender = false;
 
@@ -44,7 +46,10 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		return fail(400, 'That passage could not be loaded');
 	}
 	const youtubeKey = process.env.YOUTUBE_API_KEY?.trim();
-	const refreshVideo = youtubeKey && passageVideos(passage).length > 0 && await allowVideoRefresh();
+	const reviewedVideos = passageVideos(passage);
+	const refreshVideo = youtubeKey && reviewedVideos.length > 0 && await allowVideoRefresh();
+	const exaKey = process.env.EXA_API_KEY?.trim();
+	const searchExa = Boolean(exaKey && await allowDiscovery(client));
 	const result: StudyResult = {
 		reference: passageLabel(passage),
 		passageText: local.passageText,
@@ -52,17 +57,24 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		sources: local.sources,
 		terms: local.terms,
 		claims: [],
-		videos: await verifiedPassageVideos(passage, refreshVideo ? youtubeKey : undefined),
+		videos: reviewedVideos,
+		papers: reviewedPapers(passage),
 		guide: buildGuide([], local.sources),
 		testimonials: reviewedTestimonials(passage),
 		answer: null
 	};
-	const exaKey = process.env.EXA_API_KEY?.trim();
-	if (exaKey && await allowDiscovery(client)) {
-		const [research, community] = await Promise.allSettled([discover(passage, exaKey), discoverTestimonials(passage, exaKey)]);
-		if (research.status === 'fulfilled') result.sources.push(...research.value);
-		if (community.status === 'fulfilled') result.testimonials = mergeTestimonials(result.testimonials, community.value);
-	}
+	const [verified, research, community, papers, videos] = await Promise.allSettled([
+		verifiedPassageVideos(passage, refreshVideo ? youtubeKey : undefined),
+		searchExa ? discover(passage, exaKey!) : Promise.resolve([]),
+		searchExa ? discoverTestimonials(passage, exaKey!) : Promise.resolve([]),
+		passagePapers(passage, process.env.OPENALEX_API_KEY?.trim(), client),
+		discoverPassageVideos(passage, youtubeKey, client)
+	]);
+	if (verified.status === 'fulfilled') result.videos = verified.value;
+	if (research.status === 'fulfilled') result.sources.push(...research.value);
+	if (community.status === 'fulfilled') result.testimonials = mergeTestimonials(result.testimonials, community.value);
+	if (papers.status === 'fulfilled') result.papers = papers.value;
+	if (videos.status === 'fulfilled') result.videos = mergeVideos(result.videos, videos.value);
 	const openaiKey = input.openaiKey?.trim();
 	if (openaiKey) {
 		try {

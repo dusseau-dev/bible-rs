@@ -15,7 +15,7 @@ export interface StudySource {
 	id: string;
 	title: string;
 	author: string;
-	kind: 'scripture' | 'study_note' | 'language_data' | 'academic' | 'commentary';
+	kind: 'scripture' | 'study_note' | 'language_data' | 'academic' | 'commentary' | 'historical_record';
 	tradition: Tradition;
 	scope: EvidenceScope;
 	url: string;
@@ -47,6 +47,22 @@ export interface StudyVideo {
 	url: string;
 	scope: EvidenceScope;
 	verification: 'video link only';
+	durationSeconds?: number;
+	format?: 'short' | 'full';
+	reviewed?: boolean;
+}
+
+export interface StudyPaper {
+	id: string;
+	title: string;
+	authors: string;
+	venue: string;
+	year: number | null;
+	type: string;
+	doi: string | null;
+	url: string;
+	scope: 'direct' | 'context';
+	openAccess: boolean;
 }
 
 export interface StudyGuideStep {
@@ -74,6 +90,7 @@ export interface StudyResult {
 	terms: StudyTerm[];
 	claims: StudyClaim[];
 	videos: StudyVideo[];
+	papers: StudyPaper[];
 	guide: StudyGuideStep[];
 	testimonials: StudyTestimonial[];
 	answer: { text: string; sourceIds: string[] } | null;
