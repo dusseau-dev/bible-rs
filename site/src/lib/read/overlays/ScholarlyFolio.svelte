@@ -3,7 +3,6 @@
 	import { getApp } from '../app.svelte';
 	import type { StudyLayer, StudyResult, StudySource, Tradition } from '../study';
 	import { Icon } from '../ui';
-	import { getStudyKey, setStudyKey } from './study-key';
 
 	type StudyTab = 'guide' | 'history' | 'academic' | 'testimonials' | 'videos';
 	const tabs: { id: StudyTab; label: string }[] = [
@@ -30,39 +29,33 @@
 	let result = $state<StudyResult | null>(null);
 	let loading = $state(false);
 	let error = $state('');
-	let apiKey = $state(getStudyKey());
-	let style = $state<'standard' | 'simple'>('standard');
 	let tradition = $state<Tradition | 'all'>('all');
 	let videoFilter = $state<'all' | 'short' | 'full'>('all');
-	let question = $state('');
-	let asked = $state('');
 	let controller: AbortController | null = null;
 	const aroundText = $derived(result?.contextText.replace(result.passageText, '').trim() ?? '');
 	const close = () => { controller?.abort(); app.studyPassage = null; };
 	const visible = (source: StudySource) => tradition === 'all' || source.tradition === tradition;
 	const cited = (ids: string[]) => ids.map((id) => result?.sources.find((source) => source.id === id)).filter((s): s is StudySource => Boolean(s));
 	const claims = (layer: StudyLayer) => (result?.claims ?? []).filter((claim) => claim.layer === layer && (tab !== 'academic' || tradition === 'all' || claim.tradition === tradition));
-	const sources = (kinds: StudySource['kind'][]) => (result?.sources ?? []).filter((source) => kinds.includes(source.kind) && visible(source));
+	// Earlier-book study notes back the history facts; they are not sources on this passage.
+	const sources = (kinds: StudySource['kind'][]) => (result?.sources ?? []).filter((source) => kinds.includes(source.kind) && visible(source) && !(source.kind === 'study_note' && source.scope === 'related'));
 	const historicalRecords = () => (result?.sources ?? []).filter((source) => source.kind === 'historical_record');
 	const videoTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
-	async function load(mode: 'open' | 'ask' = 'open') {
+	async function load() {
 		controller?.abort();
 		const current = new AbortController();
 		controller = current;
 		loading = true; error = '';
-		asked = mode === 'ask' ? question.trim() : '';
 		try {
 			const response = await fetch('/api/study', {
 				method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store', signal: current.signal,
-				body: JSON.stringify({ passage, mode, question: mode === 'ask' ? asked : undefined, style, aiKey: apiKey.trim() || undefined })
+				body: JSON.stringify({ passage, mode: 'open', style: 'standard' })
 			});
 			const data = await response.json();
 			if (!response.ok) throw new Error(data.error || 'The study could not load');
 			if (controller !== current) return;
 			result = data as StudyResult;
-			setStudyKey(apiKey);
-			if (mode === 'ask') selectTab('guide');
 		} catch (cause) {
 			if (!current.signal.aborted) error = cause instanceof Error ? cause.message : 'The study could not load';
 		} finally { if (controller === current) loading = false; }
@@ -78,11 +71,6 @@
 		event.preventDefault();
 		selectTab(tabs[next].id);
 		document.getElementById(`study-tab-${tabs[next].id}`)?.focus();
-	}
-	function setStyle(next: typeof style) {
-		if (style === next) return;
-		style = next;
-		if (result) void load();
 	}
 	function keydown(event: KeyboardEvent) { if (event.key === 'Escape') { event.preventDefault(); close(); } }
 	onMount(() => {
@@ -115,8 +103,6 @@
 				{#if tab === 'guide'}
 					<section class="guide-intro"><h3>Read the passage closely</h3><p>Move from what the text says to its context, echoes, Christ connection, and response.</p></section>
 					{#if result.message}<p class="notice">{result.message}</p>{/if}
-					{#if asked && result.answer}<section class="answer"><h3>{asked}</h3><p>{result.answer.text}</p><div class="citations">{#each cited(result.answer.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} <Icon name="external" size={12} /></a>{/each}</div></section>{/if}
-					{#if asked && !result.answer && !result.message}<p class="notice">The available sources do not support an answer to that question yet.</p>{/if}
 					<ol class="guide-list">
 						{#each result.guide as step, index}
 							<li><span class="step-number">{index + 1}</span><div class="step-body"><h4>{step.id === 'christ' ? 'Connect to Christ' : step.id[0].toUpperCase() + step.id.slice(1)}</h4><p class="step-question">{step.question}</p>{#if step.answer}<p class="step-answer">{step.answer}</p>{#if step.connection}<span class="tag">{step.connection === 'theme' ? 'Thematic reading' : step.connection}</span>{/if}<div class="citations">{#each cited(step.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} <Icon name="external" size={12} /></a>{/each}</div>{/if}</div></li>
@@ -124,7 +110,7 @@
 					</ol>
 				{:else if tab === 'history'}
 					{#if aroundText}<section><h3>Around this passage</h3><p class="helper">The surrounding paragraph · World English Bible</p><blockquote class="passage">{aroundText}</blockquote></section>{/if}
-					<section><h3>Historical setting</h3>{#each claims('history') as claim}<p class="claim">{claim.text} <span class="citations">{#each cited(claim.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} <Icon name="external" size={12} /></a>{/each}</span></p>{/each}{#if !claims('history').length}<p class="empty">No sourced historical setting has been added for this passage.</p>{/if}</section>
+					<section><h3>Historical setting</h3>{#if claims('history').length}<ul class="facts">{#each claims('history') as claim}<li>{claim.text} <span class="citations">{#each cited(claim.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} <Icon name="external" size={12} /></a>{/each}</span></li>{/each}</ul>{/if}{#if !claims('history').length}<p class="empty">No sourced historical setting has been added for this passage.</p>{/if}</section>
 					<section><h3>Archaeology &amp; records</h3>{#if historicalRecords().length}<p class="helper">Museum records give context for people and events; they do not verify every detail in the text.</p>{/if}{#each historicalRecords() as source}<article class="source"><strong>{source.title}</strong><span class="tag">{source.location} · Contextual evidence</span><p>{source.excerpt}</p><a href={source.url} target="_blank" rel="noopener noreferrer">{source.author} <Icon name="external" size={12} /></a></article>{/each}{#if !historicalRecords().length}<p class="empty">No curated artifact or historical record is linked to this passage yet.</p>{/if}</section>
 				{:else if tab === 'academic'}
 					<div class="filter-row"><span>Tradition</span><div class="filters" role="group" aria-label="Interpretive tradition">{#each traditions as item}<button type="button" class:active={tradition === item.id} aria-pressed={tradition === item.id} onclick={() => tradition = item.id}>{item.label}</button>{/each}</div></div>
@@ -139,11 +125,6 @@
 				{/if}
 			</div>
 		{/if}
-	</div>
-	<div class="bottom">
-		<div class="answer-controls"><span>Answer style</span><div class="filters style-filters" role="group" aria-label="Answer style"><button type="button" class:active={style === 'standard'} aria-pressed={style === 'standard'} onclick={() => setStyle('standard')}>Standard</button><button type="button" class:active={style === 'simple'} aria-pressed={style === 'simple'} onclick={() => setStyle('simple')}>Simple</button></div></div>
-		<label class="key-field"><span>AI key <small>Only in this tab</small></span><input type="password" autocomplete="off" bind:value={apiKey} oninput={(event) => setStudyKey(event.currentTarget.value)} onchange={() => void load()} placeholder="CheaperInference or OpenAI" /></label>
-		<form class="ask-form" onsubmit={(event) => { event.preventDefault(); if (question.trim() && !loading) void load('ask'); }}><input aria-label="Ask a follow-up" maxlength="500" bind:value={question} placeholder="Ask a follow-up about this passage" /><button type="submit" aria-label="Send question" disabled={loading || !question.trim()}><Icon name="arrow-right" size={18} /></button></form>
 	</div>
 </div>
 
@@ -186,6 +167,10 @@
 	.step-answer { margin:10px 0 0; font:15px/1.5 Georgia,serif; }
 	.passage { margin:14px 0 0; white-space:pre-line; font:15px/1.6 Georgia,serif; }
 	.claim { font:14px/1.55 Georgia,serif; }
+	.facts { margin:0; padding:0 0 0 18px; }
+	.facts li { padding:7px 0; font:14px/1.55 Georgia,serif; }
+	.facts li::marker { color:#4d7669; }
+	.facts .citations { margin-top:4px; }
 	.source { padding:15px 0; border-bottom:1px solid #e9e5dc; }
 	.source:last-child { border-bottom:0; padding-bottom:3px; }
 	.source strong { display:block; font:700 14px/1.4 Arial,sans-serif; }
@@ -199,29 +184,13 @@
 	.term span { flex:1; }
 	.term small { color:#596a70; }
 	.filter-row { padding:16px 0 2px; }
-	.filter-row > span,.answer-controls > span { color:#596a70; font-size:11px; font-weight:700; }
+	.filter-row > span { color:#596a70; font-size:11px; font-weight:700; }
 	.filters { display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
 	.filters button { min-height:30px; padding:5px 10px; border-radius:7px; color:#52616a; font-size:11px; }
 	.filters button:hover { background:#f0eee7; }
 	.filters button.active { background:#dcebe4; color:#264c46; font-weight:700; }
 	.video-filters { margin:13px 0 4px; }
-	.answer { padding:20px 0; }
-	.answer p { font:15px/1.5 Georgia,serif; }
-	.bottom { flex:none; padding:12px 28px 17px; border-top:1px solid #ddd8cd; background:#fffdf7; border-radius:0 0 16px 16px; }
-	.answer-controls { display:flex; align-items:center; justify-content:space-between; gap:10px; }
-	.style-filters { margin:0; padding:2px; gap:0; border:1px solid #d7dcd4; border-radius:9px; }
-	.style-filters button { min-height:27px; padding:4px 12px; }
-	.key-field { display:flex; align-items:center; gap:12px; margin:10px 0; }
-	.key-field span { flex:0 0 102px; font-size:11px; font-weight:700; }
-	.key-field small { display:block; color:#596a70; font-weight:400; }
-	.key-field input,.ask-form input { min-width:0; height:36px; border:1px solid #c9cec7; border-radius:8px; background:#fff; color:#263442; font:13px Arial,sans-serif; }
-	.key-field input { flex:1; padding:0 10px; }
-	.ask-form { display:flex; gap:8px; }
-	.ask-form input { flex:1; padding:0 11px; }
-	.ask-form button { display:grid; place-items:center; flex:none; width:36px; height:36px; border-radius:8px; background:#2f5d52; color:#fff; }
-	.ask-form button:hover:not(:disabled) { background:#264c46; }
-	.ask-form button:disabled { opacity:.45; cursor:not-allowed; }
 	.folio :global(button:focus-visible),.folio :global(input:focus-visible),.folio :global(a:focus-visible) { outline:2px solid #396e61; outline-offset:2px; }
-	@media (max-width:1240px) { .folio { top:auto; left:0; right:0; bottom:0; width:100%; height:min(84dvh,760px); border-radius:16px 16px 0 0; } .bottom { border-radius:0; } }
-	@media (max-width:600px) { .folio-header { padding:16px 20px 14px; } .folio-header h2 { font-size:22px; } .folio-header p { font-size:11px; } .content { padding:0 20px 18px; } .passage-intro { padding-top:16px; } .selection-quote { font-size:15px; -webkit-line-clamp:2; line-clamp:2; } .tabs { gap:17px; } .bottom { padding:10px 20px max(14px,env(safe-area-inset-bottom)); } .key-field span { flex-basis:82px; } .key-field input,.ask-form input { font-size:16px; } }
+	@media (max-width:1240px) { .folio { top:auto; left:0; right:0; bottom:0; width:100%; height:min(84dvh,760px); border-radius:16px 16px 0 0; } }
+	@media (max-width:600px) { .folio-header { padding:16px 20px 14px; } .folio-header h2 { font-size:22px; } .folio-header p { font-size:11px; } .content { padding:0 20px max(18px,env(safe-area-inset-bottom)); } .passage-intro { padding-top:16px; } .selection-quote { font-size:15px; -webkit-line-clamp:2; line-clamp:2; } .tabs { gap:17px; } }
 </style>

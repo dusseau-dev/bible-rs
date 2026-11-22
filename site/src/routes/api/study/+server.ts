@@ -1,5 +1,4 @@
 import { json } from '@sveltejs/kit';
-import { dev } from '$app/env';
 import { CHEAPERINFERENCE_API_KEY, OPENAI_API_KEY } from '$app/env/private';
 import type { RequestHandler } from './$types';
 import type { StudyRequest, StudyResult } from '#lib/read/study.js';
@@ -77,7 +76,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	if (community.status === 'fulfilled') result.testimonials = mergeTestimonials(result.testimonials, community.value);
 	if (papers.status === 'fulfilled') result.papers = papers.value;
 	if (videos.status === 'fulfilled') result.videos = mergeVideos(result.videos, videos.value);
-	const aiKey = input.aiKey?.trim() || input.openaiKey?.trim() || (dev ? CHEAPERINFERENCE_API_KEY?.trim() || OPENAI_API_KEY?.trim() : undefined);
+	const aiKey = CHEAPERINFERENCE_API_KEY?.trim() || OPENAI_API_KEY?.trim() || input.aiKey?.trim() || input.openaiKey?.trim();
 	if (aiKey) {
 		try {
 			const generated = await generateStudy({
@@ -97,8 +96,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		}
 	} else {
 		result.message = input.mode === 'ask'
-			? 'Add your CheaperInference or OpenAI API key to ask a question.'
-			: 'Add your CheaperInference or OpenAI API key for an evidence-linked summary. Sources and language data are available below.';
+			? 'Answers are unavailable right now. Try again later.'
+			: 'AI explanations are unavailable right now. Sources and language data are still available.';
 	}
 	return json(result, { headers });
 };
