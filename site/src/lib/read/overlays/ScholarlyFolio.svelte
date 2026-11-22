@@ -2,7 +2,17 @@
 	import { onMount } from 'svelte';
 	import { getApp } from '../app.svelte';
 	import type { StudyLayer, StudyResult, StudySource, Tradition } from '../study';
+	import { Icon } from '../ui';
 	import { getStudyKey, setStudyKey } from './study-key';
+
+	type StudyTab = 'guide' | 'history' | 'academic' | 'testimonials' | 'videos';
+	const tabs: { id: StudyTab; label: string }[] = [
+		{ id: 'guide', label: 'Guide' },
+		{ id: 'history', label: 'History' },
+		{ id: 'academic', label: 'Academic' },
+		{ id: 'testimonials', label: 'Testimonials' },
+		{ id: 'videos', label: 'Videos' }
+	];
 
 	const app = getApp();
 	const passage = app.studyPassage!;
@@ -16,7 +26,7 @@
 	const selectedQuote = quoteWords ? app.core?.copySpan(quoteWords.translation, quoteWords.span, 'plain') : null;
 	let folio: HTMLElement;
 	let content: HTMLElement;
-	let tab = $state<'history' | 'academic' | 'testimonials' | 'videos'>('history');
+	let tab = $state<StudyTab>('guide');
 	let result = $state<StudyResult | null>(null);
 	let loading = $state(false);
 	let error = $state('');
@@ -27,6 +37,7 @@
 	let question = $state('');
 	let asked = $state('');
 	let controller: AbortController | null = null;
+	const aroundText = $derived(result?.contextText.replace(result.passageText, '').trim() ?? '');
 	const close = () => { controller?.abort(); app.studyPassage = null; };
 	const visible = (source: StudySource) => tradition === 'all' || source.tradition === tradition;
 	const cited = (ids: string[]) => ids.map((id) => result?.sources.find((source) => source.id === id)).filter((s): s is StudySource => Boolean(s));
@@ -37,9 +48,10 @@
 
 	async function load(mode: 'open' | 'ask' = 'open') {
 		controller?.abort();
-		const current = new AbortController(); controller = current;
+		const current = new AbortController();
+		controller = current;
 		loading = true; error = '';
-		if (mode === 'ask') asked = question.trim();
+		asked = mode === 'ask' ? question.trim() : '';
 		try {
 			const response = await fetch('/api/study', {
 				method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store', signal: current.signal,
@@ -50,13 +62,29 @@
 			if (controller !== current) return;
 			result = data as StudyResult;
 			setStudyKey(apiKey);
+			if (mode === 'ask') selectTab('guide');
 		} catch (cause) {
 			if (!current.signal.aborted) error = cause instanceof Error ? cause.message : 'The study could not load';
 		} finally { if (controller === current) loading = false; }
 	}
 
-	function selectTab(next: typeof tab) { tab = next; content?.scrollTo({ top: 0 }); }
-	function keydown(e: KeyboardEvent) { if (e.key === 'Escape') { e.preventDefault(); close(); } }
+	function selectTab(next: StudyTab) { tab = next; content?.scrollTo({ top: 0 }); }
+	function tabKeydown(event: KeyboardEvent, current: StudyTab) {
+		const index = tabs.findIndex((item) => item.id === current);
+		const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+			: event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length
+			: event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
+		if (next < 0) return;
+		event.preventDefault();
+		selectTab(tabs[next].id);
+		document.getElementById(`study-tab-${tabs[next].id}`)?.focus();
+	}
+	function setStyle(next: typeof style) {
+		if (style === next) return;
+		style = next;
+		if (result) void load();
+	}
+	function keydown(event: KeyboardEvent) { if (event.key === 'Escape') { event.preventDefault(); close(); } }
 	onMount(() => {
 		const before = document.activeElement as HTMLElement | null;
 		folio?.focus({ preventScroll: true });
@@ -66,47 +94,134 @@
 </script>
 
 <div bind:this={folio} class="folio" role="dialog" aria-modal="false" aria-label="Go deeper passage study" tabindex="-1" onkeydown={keydown}>
-	<header><div><span class="eyebrow">PASSAGE STUDY</span><h2>{result?.reference ?? 'Go deeper'}</h2></div><button type="button" aria-label="Close study" onclick={close}>×</button></header>
+	<header class="folio-header">
+		<div><h2>{result?.reference ?? 'Passage study'}</h2><p>Study the passage and follow the sources</p></div>
+		<button type="button" class="icon-button" aria-label="Close study" onclick={close}><Icon name="close" size={18} /></button>
+	</header>
 	<div bind:this={content} class="content">
-		<blockquote class="selection-quote">{selectedQuote ?? result?.passageText ?? 'Reading the selected passage…'}</blockquote>
-		<p class="translation">{selectedQuote ? 'Selected text · current translation' : 'World English Bible · public domain'}</p>
-		{#if error}<p class="alert" role="alert">{error} <button type="button" onclick={() => load()}>Retry</button></p>{/if}
-		{#if result?.message}<p class="notice">{result.message}</p>{/if}
-		{#if loading}<p class="notice">Reading the sources…</p>{/if}
-		<details class="path"><summary>Reading path <span>Observe → Contextualize → Trace → Christ → Apply</span></summary>
-			{#each result?.guide ?? [] as step}<div class="path-step"><strong>{step.id === 'christ' ? 'Connect to Christ' : step.id[0].toUpperCase() + step.id.slice(1)}</strong><p>{step.question}</p>{#if step.answer}<p class="step-answer">{step.answer} {#if step.connection}<em>({step.connection === 'theme' ? 'thematic reading' : step.connection})</em>{/if}</p><div class="citations">{#each cited(step.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} ↗</a>{/each}</div>{/if}</div>{/each}
-		</details>
-		<div class="tabs" role="tablist" aria-label="Study evidence">
-			{#each [{ id: 'history', label: 'History' }, { id: 'academic', label: 'Academic' }, { id: 'testimonials', label: 'Testimonials' }, { id: 'videos', label: 'Videos' }] as item}<button type="button" role="tab" class:active={tab === item.id} aria-selected={tab === item.id} onclick={() => selectTab(item.id as typeof tab)}>{item.label}</button>{/each}
+		<div class="passage-intro">
+			<blockquote class="selection-quote">{selectedQuote ?? result?.passageText ?? 'Reading the selected passage…'}</blockquote>
+			<p class="translation">{selectedQuote ? 'Selected text · current translation' : 'World English Bible · public domain'}</p>
 		</div>
+		{#if error}<p class="alert" role="alert">{error} <button type="button" onclick={() => load()}>Retry</button></p>{/if}
+		<div class="tabs" role="tablist" aria-label="Passage study views">
+			{#each tabs as item}
+				<button type="button" role="tab" id={`study-tab-${item.id}`} aria-controls="study-panel" aria-selected={tab === item.id} tabindex={tab === item.id ? 0 : -1} class:active={tab === item.id} onclick={() => selectTab(item.id)} onkeydown={(event) => tabKeydown(event, item.id)}>{item.label}</button>
+			{/each}
+		</div>
+		{#if loading}<p class="loading" role="status">Reading the sources…</p>{/if}
 		{#if result}
-			{#if tab === 'history'}
-				<section><h3>The text in context</h3><p class="translation">World English Bible · public domain</p><blockquote class="passage">{result.passageText}</blockquote><details><summary>Read the surrounding paragraph</summary><blockquote class="passage">{result.contextText}</blockquote></details></section>
-				<section><h3>Historical setting</h3><p class="helper">Generated historical claims link to their cited sources; open those sources to check the claim.</p>{#each claims('history') as claim}<p>{claim.text} <span class="citations">{#each cited(claim.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} ↗</a>{/each}</span></p>{/each}{#if !claims('history').length}<p class="empty">No sourced historical reconstruction is available for this passage yet.</p>{/if}</section>
-				<section><h3>Archaeology &amp; historical records</h3><p class="helper">Museum records provide context for identifiable people and events. They do not establish every claim in the biblical account.</p>{#each historicalRecords() as source}<article class="source"><strong>{source.title}</strong><span class="tag">{source.location} · Contextual evidence</span><p>{source.excerpt}</p><a href={source.url} target="_blank" rel="noopener noreferrer">{source.author} ↗</a></article>{/each}{#if !historicalRecords().length}<p class="empty">No curated artifact or historical record is linked to this passage yet.</p>{/if}</section>
-			{:else if tab === 'academic'}
-				<div class="traditions" aria-label="Interpretive tradition">{#each traditions as item}<button type="button" class:active={tradition === item.id} onclick={() => tradition = item.id}>{item.label}</button>{/each}</div>
-				<section><h3>Research papers &amp; reports</h3><p class="helper">Publication metadata and open access links. Article titles indicate relevance; their conclusions are not used as evidence until reviewed.</p>{#each result.papers ?? [] as paper}<article class="source"><strong>{paper.title}</strong><span class="tag">{paper.type} · {paper.year ?? 'Date unavailable'} · {paper.scope === 'direct' ? 'Selected verse' : 'Chapter context'} · Open access</span><p>{paper.authors} · {paper.venue}</p><a href={paper.url} target="_blank" rel="noopener noreferrer">{paper.doi ? `DOI ${paper.doi}` : 'Read open access record'} ↗</a></article>{/each}{#if !(result.papers ?? []).length}<p class="empty">No matching open access paper is available for this passage yet.</p>{/if}</section>
-				<section><h3>Scholarship and sources</h3>{#each sources(['academic','commentary','study_note']).slice(0,9) as source}<article class="source"><strong>{source.title}</strong><span class="tag">{source.scope === 'direct' ? 'Direct passage' : 'Related'} · {source.license}</span><p>{source.excerpt}</p><a href={source.url} target="_blank" rel="noopener noreferrer">{source.author} ↗</a></article>{/each}{#if !sources(['academic','commentary','study_note']).length}<p class="empty">No attributed sources are available for this passage and tradition.</p>{/if}</section>
-				<section><h3>Original-language notes</h3><p class="helper">Glosses are starting points; context determines meaning. STEPBible data is CC BY 4.0.</p>{#each result.terms.slice(0,16) as term}<div class="term"><strong>{term.original}</strong> {term.transliteration} · {term.gloss} <small>v. {term.verse}</small></div>{/each}{#if !result.terms.length}<p class="empty">No tagged language data is available.</p>{/if}</section>
-				<section><h3>Interpretation and uncertainty</h3>{#each [...claims('interpretation'), ...claims('uncertainty')] as claim}<p>{claim.text} <span class="citations">{#each cited(claim.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} ↗</a>{/each}</span></p>{/each}{#if !claims('interpretation').length && !claims('uncertainty').length}<p class="empty">The available sources do not establish a clear conclusion.</p>{/if}</section>
-			{:else if tab === 'testimonials'}
-				<section><h3>Other readers' stories</h3><p class="helper">Personal experience is separate from evidence about this passage's meaning. Read each story on its original forum.</p>{#each result.testimonials as story}<article class="source"><strong>{story.title}</strong><span class="tag">{story.scope === 'direct' ? 'Direct passage' : `Related theme${story.theme ? ` · ${story.theme}` : ''}`}</span><p>{story.author} · Christian Forums at Crosswalk</p><a href={story.url} target="_blank" rel="noopener noreferrer">Read original story ↗</a></article>{/each}{#if !result.testimonials.length}<p class="empty">No reviewed community stories were found for this passage yet.</p>{/if}</section>
-			{:else}
-				<section><h3>Videos on YouTube</h3><p class="helper">Short videos are under four minutes; full videos are four minutes or longer. Search results are matched by passage metadata, not transcript review.</p><div class="traditions" aria-label="Video length">{#each [{ id: 'all', label: 'All' }, { id: 'short', label: 'Short' }, { id: 'full', label: 'Full' }] as item}<button type="button" class:active={videoFilter === item.id} onclick={() => videoFilter = item.id as typeof videoFilter}>{item.label}</button>{/each}</div>{#each result.videos.filter((video) => videoFilter === 'all' || video.format === videoFilter) as video}<article class="source"><strong>{video.title}</strong><span class="tag">{video.scope === 'direct' ? 'Selected passage' : 'Chapter context'} · {video.reviewed ? 'Curated link' : 'YouTube search result'}{video.durationSeconds ? ` · ${videoTime(video.durationSeconds)}` : ''}</span><p>{video.channel}</p><a href={video.url} target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a></article>{/each}{#if !result.videos.some((video) => videoFilter === 'all' || video.format === videoFilter)}<p class="empty">No {videoFilter === 'all' ? 'video' : `${videoFilter} video`} is available for this passage yet.</p>{/if}</section>
-			{/if}
+			<div id="study-panel" role="tabpanel" aria-labelledby={`study-tab-${tab}`} class="tab-panel">
+				{#if tab === 'guide'}
+					<section class="guide-intro"><h3>Read the passage closely</h3><p>Move from what the text says to its context, echoes, Christ connection, and response.</p></section>
+					{#if result.message}<p class="notice">{result.message}</p>{/if}
+					{#if asked && result.answer}<section class="answer"><h3>{asked}</h3><p>{result.answer.text}</p><div class="citations">{#each cited(result.answer.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} <Icon name="external" size={12} /></a>{/each}</div></section>{/if}
+					{#if asked && !result.answer && !result.message}<p class="notice">The available sources do not support an answer to that question yet.</p>{/if}
+					<ol class="guide-list">
+						{#each result.guide as step, index}
+							<li><span class="step-number">{index + 1}</span><div class="step-body"><h4>{step.id === 'christ' ? 'Connect to Christ' : step.id[0].toUpperCase() + step.id.slice(1)}</h4><p class="step-question">{step.question}</p>{#if step.answer}<p class="step-answer">{step.answer}</p>{#if step.connection}<span class="tag">{step.connection === 'theme' ? 'Thematic reading' : step.connection}</span>{/if}<div class="citations">{#each cited(step.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} <Icon name="external" size={12} /></a>{/each}</div>{/if}</div></li>
+						{/each}
+					</ol>
+				{:else if tab === 'history'}
+					{#if aroundText}<section><h3>Around this passage</h3><p class="helper">The surrounding paragraph · World English Bible</p><blockquote class="passage">{aroundText}</blockquote></section>{/if}
+					<section><h3>Historical setting</h3>{#each claims('history') as claim}<p class="claim">{claim.text} <span class="citations">{#each cited(claim.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} <Icon name="external" size={12} /></a>{/each}</span></p>{/each}{#if !claims('history').length}<p class="empty">No sourced historical setting has been added for this passage.</p>{/if}</section>
+					<section><h3>Archaeology &amp; records</h3>{#if historicalRecords().length}<p class="helper">Museum records give context for people and events; they do not verify every detail in the text.</p>{/if}{#each historicalRecords() as source}<article class="source"><strong>{source.title}</strong><span class="tag">{source.location} · Contextual evidence</span><p>{source.excerpt}</p><a href={source.url} target="_blank" rel="noopener noreferrer">{source.author} <Icon name="external" size={12} /></a></article>{/each}{#if !historicalRecords().length}<p class="empty">No curated artifact or historical record is linked to this passage yet.</p>{/if}</section>
+				{:else if tab === 'academic'}
+					<div class="filter-row"><span>Tradition</span><div class="filters" role="group" aria-label="Interpretive tradition">{#each traditions as item}<button type="button" class:active={tradition === item.id} aria-pressed={tradition === item.id} onclick={() => tradition = item.id}>{item.label}</button>{/each}</div></div>
+					<section><h3>Research papers &amp; reports</h3><p class="helper">Open access publication links. Titles suggest relevance; conclusions need review.</p>{#each result.papers ?? [] as paper}<article class="source"><strong>{paper.title}</strong><span class="tag">{paper.type} · {paper.year ?? 'Date unavailable'} · {paper.scope === 'direct' ? 'Selected verse' : 'Chapter context'}</span><p>{paper.authors} · {paper.venue}</p><a href={paper.url} target="_blank" rel="noopener noreferrer">{paper.doi ? `DOI ${paper.doi}` : 'Open publication'} <Icon name="external" size={12} /></a></article>{/each}{#if !(result.papers ?? []).length}<p class="empty">No matching open access paper is available for this passage yet.</p>{/if}</section>
+					<section><h3>Scholarship &amp; commentary</h3>{#each sources(['academic', 'commentary', 'study_note']).slice(0, 9) as source}<article class="source"><strong>{source.title}</strong><span class="tag">{source.scope === 'direct' ? 'Direct passage' : 'Related'} · {source.license}</span><p>{source.excerpt}</p><a href={source.url} target="_blank" rel="noopener noreferrer">{source.author} <Icon name="external" size={12} /></a></article>{/each}{#if !sources(['academic', 'commentary', 'study_note']).length}<p class="empty">No attributed sources are available for this passage and tradition.</p>{/if}</section>
+					<section><h3>Original language</h3><p class="helper">Glosses are starting points; context determines meaning.</p>{#each result.terms.slice(0, 16) as term}<div class="term"><strong>{term.original}</strong><span>{term.transliteration} · {term.gloss}</span><small>v. {term.verse}</small></div>{/each}{#if !result.terms.length}<p class="empty">No tagged language data is available.</p>{/if}</section>
+					<section><h3>Interpretation &amp; uncertainty</h3>{#each [...claims('interpretation'), ...claims('uncertainty')] as claim}<p class="claim">{claim.text} <span class="citations">{#each cited(claim.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} <Icon name="external" size={12} /></a>{/each}</span></p>{/each}{#if !claims('interpretation').length && !claims('uncertainty').length}<p class="empty">The available sources do not establish a clear conclusion.</p>{/if}</section>
+				{:else if tab === 'testimonials'}
+					<section><h3>Other readers’ stories</h3><p class="helper">Personal experience is separate from evidence about the passage. Each story opens on its original forum.</p>{#each result.testimonials as story}<article class="source"><strong>{story.title}</strong><span class="tag">{story.scope === 'direct' ? 'Direct passage' : `Related theme${story.theme ? ` · ${story.theme}` : ''}`}</span><p>{story.author} · Christian Forums at Crosswalk</p><a href={story.url} target="_blank" rel="noopener noreferrer">Read original story <Icon name="external" size={12} /></a></article>{/each}{#if !result.testimonials.length}<p class="empty">No reviewed community stories were found for this passage yet.</p>{/if}</section>
+				{:else}
+					<section><h3>Videos on YouTube</h3><p class="helper">Short videos are under four minutes. Search results match passage metadata, not reviewed transcripts.</p><div class="filters video-filters" role="group" aria-label="Video length">{#each [{ id: 'all', label: 'All' }, { id: 'short', label: 'Short' }, { id: 'full', label: 'Full' }] as item}<button type="button" class:active={videoFilter === item.id} aria-pressed={videoFilter === item.id} onclick={() => videoFilter = item.id as typeof videoFilter}>{item.label}</button>{/each}</div>{#each result.videos.filter((video) => videoFilter === 'all' || video.format === videoFilter) as video}<article class="source"><strong>{video.title}</strong><span class="tag">{video.scope === 'direct' ? 'Selected passage' : 'Chapter context'} · {video.reviewed ? 'Curated link' : 'YouTube search result'}{video.durationSeconds ? ` · ${videoTime(video.durationSeconds)}` : ''}</span><p>{video.channel}</p><a href={video.url} target="_blank" rel="noopener noreferrer">Watch on YouTube <Icon name="external" size={12} /></a></article>{/each}{#if !result.videos.some((video) => videoFilter === 'all' || video.format === videoFilter)}<p class="empty">No {videoFilter === 'all' ? 'video' : `${videoFilter} video`} is available for this passage yet.</p>{/if}</section>
+				{/if}
+			</div>
 		{/if}
 	</div>
-	<div class="bottom"><details><summary>AI key and explanation style</summary><label>Your CheaperInference or OpenAI API key <small>Kept in tab memory; sent through this site's server for each request.</small><input type="password" autocomplete="off" bind:value={apiKey} oninput={(event) => setStudyKey(event.currentTarget.value)} placeholder="Optional for summaries and Ask" /></label><label>Explanation <select bind:value={style}><option value="standard">Standard</option><option value="simple">Simple</option></select></label><button type="button" onclick={() => load()} disabled={loading}>Update study</button></details><form onsubmit={(e) => { e.preventDefault(); if (question.trim() && !loading) void load('ask'); }}><input aria-label="Ask a follow-up" maxlength="500" bind:value={question} placeholder="Ask a follow-up" /><button type="submit" disabled={loading || !question.trim()}>↑</button></form>{#if asked && result?.answer}<div class="follow-answer"><strong>{asked}</strong><p>{result.answer.text}</p><div class="citations">{#each cited(result.answer.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} ↗</a>{/each}</div></div>{/if}</div>
+	<div class="bottom">
+		<div class="answer-controls"><span>Answer style</span><div class="filters style-filters" role="group" aria-label="Answer style"><button type="button" class:active={style === 'standard'} aria-pressed={style === 'standard'} onclick={() => setStyle('standard')}>Standard</button><button type="button" class:active={style === 'simple'} aria-pressed={style === 'simple'} onclick={() => setStyle('simple')}>Simple</button></div></div>
+		<label class="key-field"><span>AI key <small>Only in this tab</small></span><input type="password" autocomplete="off" bind:value={apiKey} oninput={(event) => setStudyKey(event.currentTarget.value)} onchange={() => void load()} placeholder="CheaperInference or OpenAI" /></label>
+		<form class="ask-form" onsubmit={(event) => { event.preventDefault(); if (question.trim() && !loading) void load('ask'); }}><input aria-label="Ask a follow-up" maxlength="500" bind:value={question} placeholder="Ask a follow-up about this passage" /><button type="submit" aria-label="Send question" disabled={loading || !question.trim()}><Icon name="arrow-right" size={18} /></button></form>
+	</div>
 </div>
 
 <style>
-	.folio{position:fixed;z-index:70;right:16px;top:68px;bottom:16px;width:390px;display:flex;flex-direction:column;background:#fffdf7;color:#263442;border:1px solid #d6d1c4;border-radius:17px;box-shadow:0 15px 40px #0002;outline:none;font:13px/1.5 Arial,sans-serif}
-	header{display:flex;align-items:start;justify-content:space-between;gap:15px;padding:21px 24px 16px;border-bottom:1px solid #ddd8cd}header h2{font:22px Georgia,serif;margin:3px 0 0}.eyebrow{font-size:10px;font-weight:700;letter-spacing:.13em;color:#55796e}header button{font-size:25px;color:#6b777c;line-height:1}
-	.content{overflow:auto;padding:0 24px;flex:1}.selection-quote{margin:18px 0 4px;padding-left:13px;border-left:2px solid #68988e;font:15px/1.5 Georgia,serif;max-height:75px;overflow:hidden}.translation,.helper,.empty{color:#596a70;font-size:12px}.translation{margin:3px 0 15px}.notice,.alert{padding:10px;border-radius:8px;background:#f1eee5;color:#596a70;font-size:12px}.alert{color:#9d3e35}
-	.path{border-top:1px solid #ddd8cd;border-bottom:1px solid #ddd8cd;padding:12px 0}.path summary{cursor:pointer;font-weight:700;color:#365e56}.path summary span{display:block;font-size:11px;color:#62736e;font-weight:400}.path-step{padding:10px 0;border-top:1px solid #ece7dc}.path-step:first-of-type{margin-top:12px}.path-step strong{font-size:12px;color:#365e56}.path-step p{margin:3px 0;font-size:12px}.path-step .step-answer{font-size:13px}.path-step em{color:#66766f}
-	.tabs{display:flex;gap:3px;overflow:auto;position:sticky;top:0;background:#fffdf7;z-index:1;padding:13px 0 8px;border-bottom:1px solid #ddd8cd}.tabs button,.traditions button{padding:8px 9px;border-radius:8px;color:#52616a;font-size:12px;white-space:nowrap}.tabs .active,.traditions .active{background:#dcebe6;color:#264c46;font-weight:700}.traditions{display:flex;overflow:auto;gap:2px;margin-top:12px}
-	section{padding:18px 0;border-bottom:1px solid #e6e0d6}h3{font:17px Georgia,serif;margin:0 0 10px}section p{margin:9px 0}.passage{margin:10px 0;padding-left:12px;border-left:2px solid #c4d4cc;white-space:pre-line;font:14px/1.6 Georgia,serif}.source{border:1px solid #ddd8cd;border-radius:9px;padding:10px 12px;margin:9px 0}.source strong{display:block;font-size:13px}.source p{font-size:12px;color:#596a70}.source a,.citations a{color:#365e56;text-decoration:none;font-size:11px}.source a:hover,.citations a:hover{text-decoration:underline}.tag{display:inline-block;font-size:10px;color:#365e56;margin-top:4px}.term{padding:6px 0;border-bottom:1px solid #eee7dc;font-size:12px}.term strong{font-size:15px}.term small{color:#66766f}.citations{display:inline-flex;gap:6px;flex-wrap:wrap}
-	.bottom{padding:10px 24px 18px;border-top:1px solid #ddd8cd;background:#fffdf7;border-radius:0 0 17px 17px}.bottom details{font-size:11px;color:#596a70;margin-bottom:9px}.bottom summary{cursor:pointer}.bottom label{display:grid;gap:4px;margin-top:8px}.bottom label small{font-weight:400}.bottom input,.bottom select{min-height:36px;padding:7px 9px;border:1px solid #c9cec7;border-radius:8px;background:white;color:#263442}.bottom form{display:flex;gap:7px}.bottom form input{flex:1;min-width:0}.bottom form button{width:36px;border-radius:8px;background:#263a46;color:white;font-size:18px}.bottom button:disabled{opacity:.5}.follow-answer{max-height:120px;overflow:auto;font-size:12px}.follow-answer p{margin:5px 0}
-	@media (max-width:700px){.folio{top:auto;left:0;right:0;bottom:0;width:100%;height:min(78dvh,720px);border-radius:18px 18px 0 0}.bottom{border-radius:0}.content{padding:0 18px}header,.bottom{padding-left:18px;padding-right:18px}}
+	.folio { position:fixed; z-index:70; right:16px; top:68px; bottom:16px; width:480px; display:flex; flex-direction:column; background:#fffdf7; color:#263442; border:1px solid #d6d1c4; border-radius:16px; box-shadow:0 15px 40px #0002; outline:none; font:13px/1.5 Arial,sans-serif; }
+	.folio :global(::selection) { background:#c7ddd4; color:#203b36; }
+	.folio-header { display:flex; align-items:start; justify-content:space-between; gap:16px; padding:23px 28px 19px; border-bottom:1px solid #e4dfd3; }
+	.folio-header h2 { margin:0; font:25px/1.2 Georgia,serif; letter-spacing:-.02em; }
+	.folio-header p { margin:5px 0 0; color:#596a70; font-size:12px; }
+	.icon-button { display:grid; place-items:center; flex:none; width:32px; height:32px; margin:-3px -8px 0 0; border-radius:8px; color:#52616a; }
+	.icon-button:hover { background:#ebe8df; }
+	.content { flex:1; min-height:0; overflow:auto; padding:0 28px 24px; scrollbar-color:#b5beb8 transparent; scrollbar-width:thin; }
+	.passage-intro { padding:22px 0 14px; }
+	.selection-quote { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; margin:0; overflow:hidden; font:16px/1.5 Georgia,serif; }
+	.translation { margin:9px 0 0; color:#596a70; font-size:11px; }
+	.tabs { display:flex; gap:20px; position:sticky; top:0; z-index:2; overflow-x:auto; padding:0; background:#fffdf7; border-bottom:1px solid #dcd8cc; scrollbar-width:none; }
+	.tabs::-webkit-scrollbar { display:none; }
+	.tabs button { flex:none; min-height:45px; padding:0 1px; border-bottom:2px solid transparent; color:#52616a; font-size:12px; white-space:nowrap; }
+	.tabs button:hover { color:#264c46; }
+	.tabs button.active { border-bottom-color:#396e61; color:#264c46; font-weight:700; }
+	.tab-panel { padding-top:5px; }
+	section { padding:23px 0 24px; border-bottom:1px solid #e9e5dc; }
+	section:last-child { border-bottom:0; }
+	h3 { margin:0 0 10px; font:19px/1.3 Georgia,serif; letter-spacing:-.01em; }
+	h4 { margin:0; font:700 13px/1.4 Arial,sans-serif; }
+	section p { margin:8px 0; }
+	.helper,.empty,.notice,.loading { color:#596a70; font-size:12px; }
+	.helper { margin:0 0 14px; line-height:1.55; }
+	.empty { padding:12px 0 2px; }
+	.notice,.alert { margin:16px 0 0; padding:11px 12px; border-radius:8px; background:#f0eee6; }
+	.alert { color:#923f35; font-size:12px; }
+	.alert button { margin-left:6px; color:inherit; font-weight:700; text-decoration:underline; }
+	.loading { margin:13px 0 0; }
+	.guide-intro { padding-bottom:15px; }
+	.guide-intro p { color:#596a70; font-size:12px; line-height:1.55; }
+	.guide-list { padding:0; margin:0; list-style:none; }
+	.guide-list li { display:grid; grid-template-columns:30px minmax(0,1fr); gap:13px; padding:20px 0 22px; border-bottom:1px solid #e9e5dc; }
+	.step-number { display:grid; place-items:center; width:27px; height:27px; border-radius:50%; background:#e2ede7; color:#305c50; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+	.step-question { margin:4px 0 0; color:#596a70; font-size:12px; line-height:1.55; }
+	.step-answer { margin:10px 0 0; font:15px/1.5 Georgia,serif; }
+	.passage { margin:14px 0 0; white-space:pre-line; font:15px/1.6 Georgia,serif; }
+	.claim { font:14px/1.55 Georgia,serif; }
+	.source { padding:15px 0; border-bottom:1px solid #e9e5dc; }
+	.source:last-child { border-bottom:0; padding-bottom:3px; }
+	.source strong { display:block; font:700 14px/1.4 Arial,sans-serif; }
+	.source p { margin:7px 0; color:#52616a; font-size:12px; line-height:1.55; }
+	.tag { display:block; margin-top:5px; color:#4d7669; font-size:11px; }
+	.source a,.citations a { display:inline-flex; align-items:center; gap:3px; color:#2d6658; font-size:12px; text-decoration:underline; text-decoration-color:#a9c0b5; text-underline-offset:2px; }
+	.source a:hover,.citations a:hover { text-decoration-color:currentColor; }
+	.citations { display:flex; flex-wrap:wrap; gap:5px 12px; margin-top:8px; }
+	.term { display:flex; align-items:baseline; gap:9px; padding:8px 0; border-bottom:1px solid #eeeae2; font-size:12px; }
+	.term strong { font:17px Georgia,serif; }
+	.term span { flex:1; }
+	.term small { color:#596a70; }
+	.filter-row { padding:16px 0 2px; }
+	.filter-row > span,.answer-controls > span { color:#596a70; font-size:11px; font-weight:700; }
+	.filters { display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
+	.filters button { min-height:30px; padding:5px 10px; border-radius:7px; color:#52616a; font-size:11px; }
+	.filters button:hover { background:#f0eee7; }
+	.filters button.active { background:#dcebe4; color:#264c46; font-weight:700; }
+	.video-filters { margin:13px 0 4px; }
+	.answer { padding:20px 0; }
+	.answer p { font:15px/1.5 Georgia,serif; }
+	.bottom { flex:none; padding:12px 28px 17px; border-top:1px solid #ddd8cd; background:#fffdf7; border-radius:0 0 16px 16px; }
+	.answer-controls { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+	.style-filters { margin:0; padding:2px; gap:0; border:1px solid #d7dcd4; border-radius:9px; }
+	.style-filters button { min-height:27px; padding:4px 12px; }
+	.key-field { display:flex; align-items:center; gap:12px; margin:10px 0; }
+	.key-field span { flex:0 0 102px; font-size:11px; font-weight:700; }
+	.key-field small { display:block; color:#596a70; font-weight:400; }
+	.key-field input,.ask-form input { min-width:0; height:36px; border:1px solid #c9cec7; border-radius:8px; background:#fff; color:#263442; font:13px Arial,sans-serif; }
+	.key-field input { flex:1; padding:0 10px; }
+	.ask-form { display:flex; gap:8px; }
+	.ask-form input { flex:1; padding:0 11px; }
+	.ask-form button { display:grid; place-items:center; flex:none; width:36px; height:36px; border-radius:8px; background:#2f5d52; color:#fff; }
+	.ask-form button:hover:not(:disabled) { background:#264c46; }
+	.ask-form button:disabled { opacity:.45; cursor:not-allowed; }
+	.folio :global(button:focus-visible),.folio :global(input:focus-visible),.folio :global(a:focus-visible) { outline:2px solid #396e61; outline-offset:2px; }
+	@media (max-width:1240px) { .folio { top:auto; left:0; right:0; bottom:0; width:100%; height:min(84dvh,760px); border-radius:16px 16px 0 0; } .bottom { border-radius:0; } }
+	@media (max-width:600px) { .folio-header { padding:16px 20px 14px; } .folio-header h2 { font-size:22px; } .folio-header p { font-size:11px; } .content { padding:0 20px 18px; } .passage-intro { padding-top:16px; } .selection-quote { font-size:15px; -webkit-line-clamp:2; line-clamp:2; } .tabs { gap:17px; } .bottom { padding:10px 20px max(14px,env(safe-area-inset-bottom)); } .key-field span { flex-basis:82px; } .key-field input,.ask-form input { font-size:16px; } }
 </style>

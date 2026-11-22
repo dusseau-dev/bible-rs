@@ -88,6 +88,8 @@
 	let systemDark = $state(false);
 	/** A phone's sidebar covers the reader rather than pushing it aside. */
 	let phone = $state(false);
+	/** The study folio uses a bottom sheet until the reader and panel both have room. */
+	let studySheet = $state(false);
 
 	const s = $derived(app.settings);
 	const parallel = $derived(app.columns().length > 1);
@@ -120,6 +122,10 @@
 		phone = narrow.matches;
 		const onNarrow = () => (phone = narrow.matches);
 		narrow.addEventListener('change', onNarrow);
+		const studyNarrow = matchMedia('(max-width: 1240px)');
+		studySheet = studyNarrow.matches;
+		const onStudyNarrow = () => (studySheet = studyNarrow.matches);
+		studyNarrow.addEventListener('change', onStudyNarrow);
 
 		app.adopt(data.restore ? null : addressed(data.translation));
 		requestAnimationFrame(() => (booted = true));
@@ -159,6 +165,7 @@
 		return () => {
 			dark.removeEventListener('change', onDark);
 			narrow.removeEventListener('change', onNarrow);
+			studyNarrow.removeEventListener('change', onStudyNarrow);
 			clearInterval(tick);
 			clearInterval(backups);
 			document.removeEventListener('visibilitychange', onVisibility);
@@ -313,7 +320,7 @@
 			<Sidebar />
 		</aside>
 		<main class="main" style:--left="{sidebarShown ? sidebarExtent : 0}px">
-			<div class="reading" style:right="{app.studyPassage && !phone ? 420 : app.panel && app.page === 'reader' ? INSPECTOR : 0}px">
+			<div class="reading" style:right="{app.studyPassage && !studySheet ? 500 : app.panel && app.page === 'reader' ? INSPECTOR : 0}px">
 				<Reader top={chrome + PAGE_TOP} {chrome} covered={app.page !== 'reader'} />
 				{#if app.page === 'reader' && band > 0}
 					<div class="bands" style:height="{TOOLBAR + band}px"></div>
