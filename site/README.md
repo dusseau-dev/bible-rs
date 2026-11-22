@@ -51,9 +51,9 @@ Academic shows journal articles, reports, preprints, dissertations, and book cha
 publication metadata, not as conclusions ingested by the model. Videos can be filtered into
 short clips (under four minutes) and full videos (four minutes or longer); search results are
 matched from YouTube metadata, not transcripts. Testimonials are link-only public forum stories,
-with exact passage matches before reviewed related themes. A user's OpenAI API key enables cited summaries and follow-up questions;
+with exact passage matches before reviewed related themes. A user's CheaperInference or OpenAI API key enables cited summaries and follow-up questions;
 when entered in the panel, it is kept in tab memory only and sent to `/api/study` for the request,
-not persisted. For local development, `OPENAI_API_KEY` in the gitignored `.env.development.local`
+not persisted. For local development, `CHEAPERINFERENCE_API_KEY` (preferred) or `OPENAI_API_KEY` in the gitignored `.env.development.local`
 is used when the panel key is empty; restart the dev server after changing the file. This fallback
 is disabled in production.
 
@@ -63,7 +63,7 @@ Optional server environment variables:
 |---|---|
 | `EXA_API_KEY` | Discover additional links from an approved domain list. Search runs only when both Upstash variables below are set; per-reader and global daily limits apply. |
 | `YOUTUBE_API_KEY` | Refresh reviewed video metadata and, with Upstash configured, search YouTube for passage-matched short and full videos. Results are cached for seven days. Search has per-reader and global daily limits. |
-| `OPENALEX_API_KEY` | With Upstash configured, find open-access scholarly publication metadata through OpenAlex. Results are cached for seven days; no paper body is stored or sent to OpenAI. |
+| `OPENALEX_API_KEY` | With Upstash configured, find open-access scholarly publication metadata through OpenAlex. Results are cached for seven days; no paper body is stored or sent to the AI provider. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Durable study and site-funded discovery limits. Without them, a local instance limit applies and Exa discovery is disabled. |
 
 To rebuild the licensed data shards from pinned revisions, run

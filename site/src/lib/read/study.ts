@@ -102,5 +102,7 @@ export interface StudyRequest {
 	mode: 'open' | 'ask' | 'explain';
 	question?: string;
 	style: 'standard' | 'simple';
+	aiKey?: string;
+	/** Kept for clients using the original request shape. */
 	openaiKey?: string;
 }

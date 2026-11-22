@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dev } from '$app/env';
 	import { onMount } from 'svelte';
 	import { getApp } from '../app.svelte';
 	import type { StudyPassage, StudyResult } from '../study';
@@ -28,7 +29,7 @@
 	});
 
 	async function load() {
-		if (!apiKey.trim() || (mode === 'ask' && !question.trim())) return;
+		if ((!apiKey.trim() && !dev) || (mode === 'ask' && !question.trim())) return;
 		controller?.abort();
 		const current = new AbortController();
 		controller = current;
@@ -37,7 +38,7 @@
 		try {
 			const response = await fetch('/api/study', {
 				method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store', signal: current.signal,
-				body: JSON.stringify({ passage, mode: mode === 'ask' ? 'ask' : 'explain', question: mode === 'ask' ? question.trim() : undefined, style: mode === 'simplify' ? 'simple' : 'standard', openaiKey: apiKey.trim() })
+				body: JSON.stringify({ passage, mode: mode === 'ask' ? 'ask' : 'explain', question: mode === 'ask' ? question.trim() : undefined, style: mode === 'simplify' ? 'simple' : 'standard', aiKey: apiKey.trim() })
 			});
 			const data = await response.json();
 			if (!response.ok) throw new Error(data.error || 'The explanation could not load');
@@ -53,10 +54,10 @@
 
 	function switchMode(next: typeof mode) {
 		controller?.abort(); serial++; result = null; error = ''; loading = false; mode = next;
-		if (next !== 'ask' && apiKey.trim()) void load();
+		if (next !== 'ask' && (apiKey.trim() || dev)) void load();
 	}
 
-	onMount(() => { if (mode !== 'ask' && apiKey.trim()) void load(); return () => controller?.abort(); });
+	onMount(() => { if (mode !== 'ask' && (apiKey.trim() || dev)) void load(); return () => controller?.abort(); });
 </script>
 
 <Popover {anchor} side="bottom" align="center" gap={10} onclose={close} label="Passage {mode}" radius={15} class="quick-study">
@@ -66,12 +67,12 @@
 			<form onsubmit={(event) => { event.preventDefault(); void load(); }}>
 				<input aria-label="Question about passage" maxlength="500" bind:value={question} placeholder="Ask about this passage" />
 				<button type="button" class="sources-button" aria-expanded={sourceInfo} onclick={() => sourceInfo = !sourceInfo}>◉ Sources</button>
-				<button type="submit" class="submit" disabled={loading || !question.trim() || !apiKey.trim()} aria-label="Send question">↑</button>
+				<button type="submit" class="submit" disabled={loading || !question.trim() || (!apiKey.trim() && !dev)} aria-label="Send question">↑</button>
 			</form>
 			{#if sourceInfo}<p class="source-note">Answers use the passage and linked study sources shown in Go deeper. Community stories are not used as evidence.</p>{/if}
 			<div class="suggestions">{#each ['Why this detail?', 'Where is this echoed?', 'How does this point to Christ?'] as suggestion}<button type="button" onclick={() => question = suggestion}>{suggestion}</button>{/each}</div>
-		{:else if !result && apiKey.trim() && !loading}<button type="button" class="generate" onclick={() => void load()}>Generate {mode === 'simplify' ? 'simple explanation' : 'explanation'}</button>{/if}
-		{#if !apiKey.trim()}<label class="key">Your OpenAI API key <small>Kept only in this tab; sent through the site server for each request.</small><input type="password" autocomplete="off" bind:value={apiKey} oninput={(event) => setStudyKey(event.currentTarget.value)} placeholder="Enter key to use Ask and Explain" /></label>{/if}
+		{:else if !result && (apiKey.trim() || dev) && !loading}<button type="button" class="generate" onclick={() => void load()}>Generate {mode === 'simplify' ? 'simple explanation' : 'explanation'}</button>{/if}
+		{#if !apiKey.trim()}<label class="key">Your CheaperInference or OpenAI API key <small>Kept only in this tab; sent through the site server for each request.</small><input type="password" autocomplete="off" bind:value={apiKey} oninput={(event) => setStudyKey(event.currentTarget.value)} placeholder="Enter key to use Ask and Explain" /></label>{/if}
 		{#if loading}<p class="message">Reading the sources…</p>{/if}
 		{#if error}<p class="message error" role="alert">{error} <button type="button" onclick={() => void load()}>Retry</button></p>{/if}
 		{#if result?.message}<p class="message">{result.message}</p>{/if}

@@ -1,4 +1,6 @@
 import { json } from '@sveltejs/kit';
+import { dev } from '$app/env';
+import { CHEAPERINFERENCE_API_KEY, OPENAI_API_KEY } from '$app/env/private';
 import type { RequestHandler } from './$types';
 import type { StudyRequest, StudyResult } from '#lib/read/study.js';
 import { generateStudy } from '#lib/server/study/answer.js';
@@ -30,7 +32,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	const passage = passageFrom(input?.passage);
 	if (!passage || !['open', 'ask', 'explain'].includes(input.mode ?? '') || !['standard', 'simple'].includes(input.style ?? ''))
 		return fail(400, 'Invalid passage or study option');
-	if (input.openaiKey !== undefined && (typeof input.openaiKey !== 'string' || input.openaiKey.length > 256))
+	if ([input.aiKey, input.openaiKey].some((key) => key !== undefined && (typeof key !== 'string' || key.length > 256)))
 		return fail(400, 'Invalid API key');
 	if (input.question !== undefined && (typeof input.question !== 'string' || input.question.length > 500))
 		return fail(400, 'Question is too long');
@@ -75,8 +77,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	if (community.status === 'fulfilled') result.testimonials = mergeTestimonials(result.testimonials, community.value);
 	if (papers.status === 'fulfilled') result.papers = papers.value;
 	if (videos.status === 'fulfilled') result.videos = mergeVideos(result.videos, videos.value);
-	const openaiKey = input.openaiKey?.trim();
-	if (openaiKey) {
+	const aiKey = input.aiKey?.trim() || input.openaiKey?.trim() || (dev ? CHEAPERINFERENCE_API_KEY?.trim() || OPENAI_API_KEY?.trim() : undefined);
+	if (aiKey) {
 		try {
 			const generated = await generateStudy({
 				passage,
@@ -85,7 +87,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 				terms: local.terms,
 				style: input.style!,
 					question: input.mode === 'ask' ? input.question?.trim() : input.mode === 'explain' ? 'Explain this passage using the reading path and its cited evidence.' : undefined,
-				key: openaiKey
+				key: aiKey
 			});
 			result.claims = generated.claims;
 			result.answer = generated.answer;
@@ -95,8 +97,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		}
 	} else {
 		result.message = input.mode === 'ask'
-			? 'Add your OpenAI API key to ask a question.'
-			: 'Add your OpenAI API key for an evidence-linked summary. Sources and language data are available below.';
+			? 'Add your CheaperInference or OpenAI API key to ask a question.'
+			: 'Add your CheaperInference or OpenAI API key for an evidence-linked summary. Sources and language data are available below.';
 	}
 	return json(result, { headers });
 };

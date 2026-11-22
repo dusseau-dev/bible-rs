@@ -32,6 +32,12 @@ describe('generated claim validation', () => {
 		expect(out.guide[3].answer).toBeNull();
 	});
 
+	it('ignores malformed JSON fields from providers without strict schema output', () => {
+		const out = validateGenerated({ claims: {} as never, guide: [{ id: 'observe', answer: 'Text', sourceIds: 'text' as never }] }, sources);
+		expect(out.claims).toEqual([]);
+		expect(out.guide[0].answer).toBeNull();
+	});
+
 	it('requests a non-stored structured answer and accepts only cited output', async () => {
 		const mock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
 			output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({
@@ -50,5 +56,27 @@ describe('generated claim validation', () => {
 		expect(request.store).toBe(false);
 		expect(request.text.format.type).toBe('json_schema');
 		expect(mock.mock.calls[0][1].headers.authorization).toBe('Bearer test-key');
+	});
+
+	it('uses CheaperInference Chat Completions for its API keys', async () => {
+		const mock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+			choices: [{ message: { content: JSON.stringify({
+				claims: [{ layer: 'interpretation', text: 'Henry reads this as reassurance.', sourceIds: ['henry'], tradition: 'protestant' }],
+				answer: { text: 'The cited commentary reads it as reassurance.', sourceIds: ['henry'] },
+				guide: []
+			}) } }]
+		}), { status: 200 }));
+		vi.stubGlobal('fetch', mock);
+		const out = await generateStudy({
+			passage: { book: 42, chapter: 3, firstVerse: 16, lastVerse: 16 },
+			contextText: '16 Public domain verse.', sources, terms: [], style: 'simple', key: 'ci_live_test'
+		});
+		expect(out.answer?.sourceIds).toEqual(['henry']);
+		expect(mock.mock.calls[0][0]).toBe('https://api.cheaperinference.com/v1/chat/completions');
+		const request = JSON.parse(mock.mock.calls[0][1].body);
+		expect(request.model).toBe('gpt-5-mini');
+		expect(request.response_format).toEqual({ type: 'json_object' });
+		expect(request.messages[0].content).toContain('Return a JSON object');
+		expect(mock.mock.calls[0][1].headers.authorization).toBe('Bearer ci_live_test');
 	});
 });

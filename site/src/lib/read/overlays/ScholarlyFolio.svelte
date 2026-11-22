@@ -43,7 +43,7 @@
 		try {
 			const response = await fetch('/api/study', {
 				method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store', signal: current.signal,
-				body: JSON.stringify({ passage, mode, question: mode === 'ask' ? asked : undefined, style, openaiKey: apiKey.trim() || undefined })
+				body: JSON.stringify({ passage, mode, question: mode === 'ask' ? asked : undefined, style, aiKey: apiKey.trim() || undefined })
 			});
 			const data = await response.json();
 			if (!response.ok) throw new Error(data.error || 'The study could not load');
@@ -97,7 +97,7 @@
 			{/if}
 		{/if}
 	</div>
-	<div class="bottom"><details><summary>OpenAI key and explanation style</summary><label>Your OpenAI API key <small>Kept in tab memory; sent through this site's server for each request.</small><input type="password" autocomplete="off" bind:value={apiKey} oninput={(event) => setStudyKey(event.currentTarget.value)} placeholder="Optional for summaries and Ask" /></label><label>Explanation <select bind:value={style}><option value="standard">Standard</option><option value="simple">Simple</option></select></label><button type="button" onclick={() => load()} disabled={loading}>Update study</button></details><form onsubmit={(e) => { e.preventDefault(); if (question.trim() && !loading) void load('ask'); }}><input aria-label="Ask a follow-up" maxlength="500" bind:value={question} placeholder="Ask a follow-up" /><button type="submit" disabled={loading || !question.trim()}>↑</button></form>{#if asked && result?.answer}<div class="follow-answer"><strong>{asked}</strong><p>{result.answer.text}</p><div class="citations">{#each cited(result.answer.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} ↗</a>{/each}</div></div>{/if}</div>
+	<div class="bottom"><details><summary>AI key and explanation style</summary><label>Your CheaperInference or OpenAI API key <small>Kept in tab memory; sent through this site's server for each request.</small><input type="password" autocomplete="off" bind:value={apiKey} oninput={(event) => setStudyKey(event.currentTarget.value)} placeholder="Optional for summaries and Ask" /></label><label>Explanation <select bind:value={style}><option value="standard">Standard</option><option value="simple">Simple</option></select></label><button type="button" onclick={() => load()} disabled={loading}>Update study</button></details><form onsubmit={(e) => { e.preventDefault(); if (question.trim() && !loading) void load('ask'); }}><input aria-label="Ask a follow-up" maxlength="500" bind:value={question} placeholder="Ask a follow-up" /><button type="submit" disabled={loading || !question.trim()}>↑</button></form>{#if asked && result?.answer}<div class="follow-answer"><strong>{asked}</strong><p>{result.answer.text}</p><div class="citations">{#each cited(result.answer.sourceIds) as source}<a href={source.url} target="_blank" rel="noopener noreferrer">{source.title} ↗</a>{/each}</div></div>{/if}</div>
 </div>
 
 <style>
