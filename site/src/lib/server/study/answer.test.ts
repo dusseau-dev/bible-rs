@@ -74,7 +74,8 @@ describe('generated claim validation', () => {
 		expect(out.answer?.sourceIds).toEqual(['henry']);
 		expect(mock.mock.calls[0][0]).toBe('https://api.cheaperinference.com/v1/chat/completions');
 		const request = JSON.parse(mock.mock.calls[0][1].body);
-		expect(request.model).toBe('gpt-5-mini');
+		expect(request.model).toBe('gpt-5.4-mini');
+		expect(request.max_tokens).toBe(3000);
 		expect(request.response_format).toEqual({ type: 'json_object' });
 		expect(request.messages[0].content).toContain('Return a JSON object');
 		expect(mock.mock.calls[0][1].headers.authorization).toBe('Bearer ci_live_test');

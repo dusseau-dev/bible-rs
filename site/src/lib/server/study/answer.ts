@@ -115,8 +115,8 @@ export async function generateStudy(args: {
 		}
 	];
 	const request = cheaperInference ? {
-		model: 'gpt-5-mini',
-		max_completion_tokens: 3000,
+		model: 'gpt-5.4-mini',
+		max_tokens: 3000,
 		response_format: { type: 'json_object' },
 		messages
 	} : {
@@ -131,7 +131,7 @@ export async function generateStudy(args: {
 		method: 'POST',
 		headers: { authorization: `Bearer ${args.key}`, 'content-type': 'application/json' },
 		body: JSON.stringify(request),
-		signal: AbortSignal.timeout(25_000)
+		signal: AbortSignal.timeout(cheaperInference ? 60_000 : 25_000)
 	});
 	if (!res.ok) {
 		if (res.status === 401) throw new Error(`${provider} did not accept that API key`);
