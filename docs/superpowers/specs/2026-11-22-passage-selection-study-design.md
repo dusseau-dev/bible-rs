@@ -1,6 +1,6 @@
 # Passage selection and study design
 
-**Status:** Approved visual direction; written spec awaiting review
+**Status:** Approved for implementation
 
 **Date:** 2026-11-22
 **Visual direction:** Scholarly folio (mockup 2)
