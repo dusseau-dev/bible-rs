@@ -111,7 +111,6 @@
 		--icon-cut: var(--paper);
 	}
 
-	.clear:hover {
-		color: var(--ink-2);
-	}
+	@media (hover:hover) and (pointer:fine) { .clear:hover { color:var(--ink-2); } }
+	@media (pointer:coarse) { .clear { min-width:44px; min-height:44px; margin-right:-10px; } }
 </style>

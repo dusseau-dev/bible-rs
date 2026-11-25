@@ -30,16 +30,24 @@ export function place(
 	gap: number,
 	flip = true
 ): Placement {
+	const viewport = window.visualViewport;
+	const top = viewport?.scale === 1 ? viewport.offsetTop : 0;
+	const vh = top + (viewport?.scale === 1 ? viewport.height : window.innerHeight);
 	const vw = window.innerWidth;
-	const vh = window.innerHeight;
+	const style = getComputedStyle(document.documentElement);
+	const safe = (edge: string) => parseFloat(style.getPropertyValue(`--safe-${edge}`)) || 0;
+	const left = MARGIN + safe('left');
+	const right = vw - MARGIN - safe('right');
+	const upper = top + MARGIN + safe('top');
+	const lower = vh - MARGIN - safe('bottom');
 	const fits = (s: Side) =>
 		s === 'bottom'
-			? anchor.bottom + gap + h <= vh - MARGIN
+			? anchor.bottom + gap + h <= lower
 			: s === 'top'
-				? anchor.top - gap - h >= MARGIN
+				? anchor.top - gap - h >= upper
 				: s === 'right'
-					? anchor.right + gap + w <= vw - MARGIN
-					: anchor.left - gap - w >= MARGIN;
+					? anchor.right + gap + w <= right
+					: anchor.left - gap - w >= left;
 	const s = !flip || fits(side) || !fits(opposite[side]) ? side : opposite[side];
 	let x: number;
 	let y: number;
@@ -50,8 +58,8 @@ export function place(
 		x = s === 'right' ? anchor.right + gap : anchor.left - gap - w;
 		y = align === 'start' ? anchor.top : align === 'end' ? anchor.bottom - h : anchor.top + anchor.height / 2 - h / 2;
 	}
-	x = Math.max(MARGIN, Math.min(x, vw - w - MARGIN));
-	y = Math.max(MARGIN, Math.min(y, vh - h - MARGIN));
+	x = Math.max(left, Math.min(x, right - w));
+	y = Math.max(upper, Math.min(y, lower - h));
 	return { x: Math.round(x), y: Math.round(y), side: s };
 }
 
@@ -60,6 +68,7 @@ export const pointRect = (x: number, y: number) => new DOMRect(x, y, 0, 0);
 
 /** Moves the element to the end of <body> while it's mounted. */
 export function portal(node: HTMLElement) {
+	node.dataset.readerPortal = '';
 	document.body.appendChild(node);
 	return {
 		destroy() {

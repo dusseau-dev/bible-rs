@@ -4,7 +4,7 @@ import { TOPIC_TRANSLATIONS, TOPICS_PATH, topicName, topicPath, topics } from '#
 import type { PageLoad } from './$types';
 
 /** Every topic, linked: a plain page, no app (see the verse page's +page.ts). */
-export const prerender = true;
+export const prerender = false;
 export const csr = false;
 
 export const load: PageLoad = async () => {

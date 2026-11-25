@@ -3,8 +3,8 @@
 	Only the chapters around the reading position are in the page; more are added as it scrolls,
 	keeping what's on screen still. A translation read live (the NLT) holds one chapter, so with it
 	the page has just the chapter being read, ending in links to the chapters either side. Clicking a verse selects it, shift-click extends, double-click
-	writes a note, right-click opens the verse menu. Selecting text (dragging, or a long press and
-	its handles on a touch screen) chooses words to highlight, within one chapter.
+	writes a note, right-click opens the passage actions. Dragging across text chooses words and
+	opens those actions; a long press and its handles on a touch screen select words too.
 -->
 <script lang="ts">
 	import { onMount, tick, untrack } from 'svelte';
@@ -641,6 +641,20 @@
 
 	function onpointerdown(e: PointerEvent) {
 		app.touch = e.pointerType !== 'mouse';
+		mouseDown = e.pointerType === 'mouse' && e.button === 0 ? { x: e.clientX, y: e.clientY } : null;
+	}
+
+	let mouseDown: { x: number; y: number } | null = null;
+
+	function onpointerup(e: PointerEvent) {
+		const start = mouseDown;
+		mouseDown = null;
+		if (e.pointerType !== 'mouse' || e.button !== 0 || !start || Math.hypot(e.clientX - start.x, e.clientY - start.y) < 4)
+			return;
+		const words = wordsSelected();
+		if (!words) return;
+		app.selectWords(words);
+		app.dispatch({ type: 'openVerseMenu', x: e.clientX, y: e.clientY });
 	}
 
 	// ------------------------------------------------------------------ the handle
@@ -758,6 +772,7 @@
 		{oncontextmenu}
 		{onmousedown}
 		{onpointerdown}
+		{onpointerup}
 		role="document"
 	>
 		{#each indices as index (index)}

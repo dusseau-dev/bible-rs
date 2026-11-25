@@ -44,9 +44,7 @@
 		transition: background-color var(--motion-fast);
 	}
 
-	.picker:hover {
-		background: var(--fill);
-	}
+	@media (hover: hover) and (pointer: fine) { .picker:hover { background: var(--fill); } }
 
 	.picker:active,
 	.picker.open {

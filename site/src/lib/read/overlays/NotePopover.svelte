@@ -167,6 +167,11 @@
 </Popover>
 
 <style>
+	@media (pointer: coarse) {
+		.head { flex-wrap:wrap; min-height:72px; }
+		.swatches { flex-basis:100%; justify-content:flex-end; }
+		.swatch, .delete, .done { min-width:44px; min-height:44px; }
+	}
 	.beak {
 		position: absolute;
 		top: -9px;
@@ -227,10 +232,12 @@
 		color: #1c1d21;
 	}
 
+	@media (hover:hover) and (pointer:fine) {
 	.swatch:hover:not(.on) {
 		box-shadow:
 			inset 0 0 0 0.5px rgb(0 0 0 / 0.18),
 			0 0 0 3px var(--fill-strong);
+	}
 	}
 
 	.swatch.on {
@@ -300,9 +307,7 @@
 		color: var(--danger);
 	}
 
-	.delete:hover {
-		background: var(--fill);
-	}
+	@media (hover:hover) and (pointer:fine) { .delete:hover { background:var(--fill); } }
 
 	.delete:active {
 		background: var(--fill-strong);
@@ -324,9 +329,7 @@
 		font: 600 12px/16px var(--font-ui);
 	}
 
-	.done:hover {
-		background-image: linear-gradient(rgb(0 0 0 / 0.07), rgb(0 0 0 / 0.07));
-	}
+	@media (hover:hover) and (pointer:fine) { .done:hover { background-image:linear-gradient(rgb(0 0 0 / 0.07), rgb(0 0 0 / 0.07)); } }
 
 	.done:active {
 		background-image: linear-gradient(rgb(0 0 0 / 0.14), rgb(0 0 0 / 0.14));

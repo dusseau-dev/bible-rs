@@ -69,10 +69,11 @@
 		aria-label={label}
 		tabindex="-1"
 		style:width="min({width}px, calc(100vw - 32px))"
-		style:height={height ? `min(${height}px, calc(100dvh - 32px))` : undefined}
+		style:height={height ? `min(${height}px, calc(var(--visual-height, 100dvh) - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)))` : undefined}
 		style:border-radius="{radius}px"
 		style:align-self={top === undefined ? undefined : 'start'}
 		style:margin-top={top === undefined ? undefined : `${top}px`}
+		style:max-height={top === undefined ? undefined : `calc(var(--visual-height, 100dvh) - ${top + 16}px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`}
 		onkeydown={keydown}
 	>
 		{@render children()}
@@ -82,7 +83,9 @@
 <style>
 	.layer {
 		position: fixed;
-		inset: 0;
+		inset: var(--visual-top, 0px) env(safe-area-inset-right, 0px) auto env(safe-area-inset-left, 0px);
+		height: var(--visual-height, 100dvh);
+		padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
 		z-index: 80;
 		display: grid;
 		place-items: center;
@@ -99,7 +102,8 @@
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		max-height: calc(100dvh - 32px);
+		max-width: calc(100% - 32px);
+		max-height: calc(var(--visual-height, 100dvh) - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
 		overflow: hidden;
 		background: var(--surface);
 		box-shadow: var(--shadow-modal);
@@ -113,6 +117,9 @@
 		from {
 			opacity: 0;
 		}
+	}
+	@media (max-width:700px), (max-height:500px) {
+		.sheet { margin-top:16px !important; max-height:calc(var(--visual-height,100dvh) - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) !important; }
 	}
 
 	@keyframes rise {

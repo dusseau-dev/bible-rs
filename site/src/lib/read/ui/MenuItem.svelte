@@ -7,6 +7,7 @@
 	interface Props {
 		icon?: IconName;
 		label: string;
+		description?: string;
 		/** Keycaps at the trailing edge, as text ("⇧⌘C"). */
 		shortcut?: string;
 		disabled?: boolean;
@@ -29,6 +30,7 @@
 	let {
 		icon,
 		label,
+		description,
 		shortcut,
 		disabled = false,
 		checked,
@@ -47,7 +49,8 @@
 {#if href}
 	<a
 		{href}
-		class={['item', 'follow', { selected }]}
+		class={['item', 'follow', { selected, described: description }]}
+		aria-label={description ? label : undefined}
 		{role}
 		aria-checked={checked ?? selected}
 		aria-disabled={disabled || undefined}
@@ -59,7 +62,8 @@
 {:else}
 	<button
 		type="button"
-		class={['item', { selected }]}
+		class={['item', { selected, described: description }]}
+		aria-label={description ? label : undefined}
 		{role}
 		aria-checked={checked ?? selected}
 		aria-disabled={disabled || undefined}
@@ -78,7 +82,7 @@
 	{:else if checked !== undefined || checkColumn}
 		<span class="check">{#if checked}<Icon name="check" size={16} />{/if}</span>
 	{/if}
-	<span class="label">{label}</span>
+	<span class="label">{label}{#if description}<span class="description">{description}</span>{/if}</span>
 	{#if shortcut}<span class="shortcut">{shortcut}</span>{/if}
 	{@render trailing?.()}
 {/snippet}
@@ -164,4 +168,8 @@
 	.item[aria-disabled='true'] .shortcut {
 		color: var(--ink-3);
 	}
+	.described { height:auto; min-height:56px; padding-top:9px; padding-bottom:9px; align-items:flex-start; }
+	.described :global(.glyph) { flex:none; margin-top:2px; }
+	.described .label { white-space:normal; line-height:20px; }
+	.description { display:block; margin-top:1px; font-size:12px; line-height:18px; color:var(--ink-3); font-weight:400; }
 </style>

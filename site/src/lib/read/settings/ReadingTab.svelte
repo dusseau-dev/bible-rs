@@ -209,8 +209,11 @@
 
 	.themes {
 		display: flex;
+		flex-wrap:wrap;
+		gap:16px 8px;
 		justify-content: space-between;
-		height: 108px;
+		min-height:108px;
+		margin-bottom:16px;
 	}
 
 	.theme {

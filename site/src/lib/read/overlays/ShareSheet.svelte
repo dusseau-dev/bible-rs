@@ -8,7 +8,7 @@
 	import { rangeLabel, type VerseRef } from '../core';
 	import type { CardShape, CardStyle, ShareCopy } from '../settings';
 	import { CARD_FONT, VERSE_DROP, cardColours, cardFonts, cardImage, layoutCard, previewText, type Seg } from '../share';
-	import { Button, Icon, Segmented, Sheet, Toggle } from '../ui';
+	import { Button, Icon, RoundButton, Segmented, Sheet, Toggle } from '../ui';
 
 	const app = getApp();
 	const o = $derived(app.settings.share);
@@ -60,6 +60,8 @@
 	const shown = $derived(fontsReady ? previewText(copy, PREVIEW_WIDTH) : copy);
 
 	let card = $state<HTMLElement>();
+	let wellWidth = $state(352);
+	const previewScale = $derived(Math.min(1, (wellWidth - 32) / (layout?.width ?? 300)));
 
 	function same(a: VerseRef, b: VerseRef) {
 		return a.book === b.book && a.chapter === b.chapter && a.verse === b.verse;
@@ -124,9 +126,10 @@
 <Sheet label="Share {reference}" onclose={close} width={760} top={72} focusSheet>
 	<header class="head">
 		<h2 class="title">Share {reference}</h2>
+		<RoundButton icon="close" label="Close sharing" onclick={close} />
 	</header>
 	<div class="body">
-		<div class="well">
+		<div class="well" bind:clientWidth={wellWidth}>
 			<div
 				bind:this={card}
 				class={['card', o.style]}
@@ -134,6 +137,7 @@
 				style:width="{layout?.width ?? 300}px"
 				style:height="{layout?.height ?? 376}px"
 				style:padding="{layout?.pad ?? 32}px"
+				style:transform="scale({previewScale})"
 			>
 				{#if o.reference}<p class="label">{reference}</p>{/if}
 				{#if layout}
@@ -206,6 +210,8 @@
 	.head {
 		display: flex;
 		align-items: center;
+		justify-content:space-between;
+		flex-shrink:0;
 		height: 52px;
 		padding: 0 24px;
 		box-shadow: inset 0 -1px var(--separator);
@@ -221,6 +227,9 @@
 		gap: 24px;
 		height: 488px;
 		padding: 24px;
+		min-height:0;
+		overflow-y:auto;
+		overscroll-behavior:contain;
 	}
 
 	.well {
@@ -421,6 +430,7 @@
 		align-items: center;
 		gap: 8px;
 		height: 64px;
+		flex-shrink:0;
 		padding: 0 24px;
 		border-radius: 0 0 16px 16px;
 		background: var(--fill);
@@ -430,4 +440,14 @@
 	.spacer {
 		flex: 1;
 	}
+	@media (max-width:700px) {
+		.head { padding:0 16px; }
+		.body { flex-direction:column; height:auto; padding:16px; }
+		.well { width:100%; height:400px; overflow:hidden; }
+		.options { width:100%; flex:none; }
+		.styles { gap:12px; flex-wrap:wrap; }
+		.foot { height:auto; min-height:64px; padding:12px 16px; flex-wrap:wrap; }
+		.spacer { display:none; }
+	}
+	@media (pointer:coarse) { .toggle { height:auto; min-height:44px; } }
 </style>

@@ -5,7 +5,7 @@ import { clip, crumbs, translationTitle } from '#lib/read/seo/meta.js';
 import type { EntryGenerator, PageLoad } from './$types';
 
 /** A translation's books, by testament: a plain page, no app (see the verse page's +page.ts). */
-export const prerender = true;
+export const prerender = false;
 export const csr = false;
 
 export const entries: EntryGenerator = async () => (await core()).bundled.map((translation) => ({ translation }));

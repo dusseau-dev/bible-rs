@@ -8,7 +8,7 @@
 	import { suggestReferences, type Reference } from '../core';
 	import { SHORTCUTS, isMac, keycaps, rowCaps } from '../keyboard';
 	import { ago } from '../time';
-	import { Icon, Keycap, type IconName } from '../ui';
+	import { Icon, Keycap, RoundButton, type IconName } from '../ui';
 
 	type Section = 'Go to' | 'Recent' | 'Translations' | 'Commands';
 
@@ -326,7 +326,7 @@
 			autocapitalize="off"
 			spellcheck="false"
 		/>
-		<Keycap label="esc" />
+		<RoundButton icon="close" label="Close commands" onclick={close} />
 	</div>
 	<div class="results" bind:this={results} id="{id}-list" role="listbox" aria-label="Results">
 		{#each items as it, i (i)}
@@ -378,7 +378,7 @@
 
 	.palette {
 		position: fixed;
-		top: 96px;
+		top: calc(var(--visual-top, 0px) + min(96px, 10dvh));
 		left: round(calc(50% - min(600px, 100vw - 40px) / 2), 1px);
 		width: min(600px, calc(100vw - 40px));
 		display: flex;
@@ -394,6 +394,7 @@
 		display: flex;
 		align-items: center;
 		height: 56px;
+		flex-shrink:0;
 		padding: 0 16px;
 		gap: 12px;
 		box-shadow: 0 1px 0 var(--separator);
@@ -424,7 +425,7 @@
 	}
 
 	.results {
-		max-height: max(120px, calc(100vh - 96px - 56px - 1px - 40px - 48px));
+		max-height: max(0px, calc(var(--visual-height, 100dvh) - min(96px, 10dvh) - 56px - 1px - 40px - 16px));
 		overflow-y: auto;
 		padding: 4px 0 6px;
 		overscroll-behavior: contain;

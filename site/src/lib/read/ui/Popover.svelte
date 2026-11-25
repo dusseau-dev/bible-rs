@@ -66,6 +66,8 @@
 		if (panel) ro.observe(panel);
 		addEventListener('resize', update);
 		addEventListener('scroll', update, true);
+		window.visualViewport?.addEventListener('resize', update);
+		window.visualViewport?.addEventListener('scroll', update);
 		if (autofocus) {
 			void tick().then(() => {
 				if (panel?.contains(document.activeElement)) return;
@@ -80,6 +82,8 @@
 			ro.disconnect();
 			removeEventListener('resize', update);
 			removeEventListener('scroll', update, true);
+			window.visualViewport?.removeEventListener('resize', update);
+			window.visualViewport?.removeEventListener('scroll', update);
 			if (panel?.contains(document.activeElement) && before?.isConnected) before.focus({ preventScroll: true });
 		};
 	});
@@ -128,6 +132,10 @@
 <style>
 	.popover {
 		position: fixed;
+		max-width: calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+		max-height: calc(var(--visual-height, 100dvh) - 16px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+		overflow-y: auto;
+		overscroll-behavior: contain;
 		z-index: 60;
 		outline: none;
 		color: var(--ink);

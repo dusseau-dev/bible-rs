@@ -4,7 +4,7 @@ import { translationBytes } from '#lib/read/node.js';
 import type { EntryGenerator, RequestHandler } from './$types';
 
 /** The bundled translations as static files (data/translations/*.bbl), fetched by the reader. */
-export const prerender = true;
+export const prerender = false;
 
 export const entries: EntryGenerator = async () =>
 	(await core()).bundled.map((id) => ({ file: `${id}.bbl` }));

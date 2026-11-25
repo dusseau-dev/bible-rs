@@ -111,7 +111,7 @@
 	<PageEmpty
 		glyph="highlighter"
 		title="Your highlights will live here"
-		body="Select a verse and press 1–6 to mark it in a colour, or right-click it and pick one. 0 clears it."
+		body="Tap a verse, choose the highlighter, and pick a colour. You can also use keys 1–6; 0 clears it."
 		hints={[[['1–6'], 'Highlight the selected verse']]}
 	/>
 {:else}
@@ -239,7 +239,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 4px;
-		height: 28px;
+		min-height: 28px;
 		margin-bottom: 20px;
 	}
 

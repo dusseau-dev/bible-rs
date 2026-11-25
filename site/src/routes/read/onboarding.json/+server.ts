@@ -8,7 +8,7 @@ import type { RequestHandler } from './$types';
  * Psalm 23's heading and opening verses (BSB) for the theme previews. Built once, so the welcome
  * doesn't download six translations to show a verse from each.
  */
-export const prerender = true;
+export const prerender = false;
 
 const OFFERED = ['kjv', 'web', 'bsb', 'asv', 'ylt', 'dby'];
 const text = (runs: { text: string }[]) => runs.map((r) => r.text).join('');

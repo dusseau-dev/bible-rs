@@ -8,6 +8,7 @@
 	import { capsText, cmdText, fixedCaps } from '../keyboard';
 	import { clock, dayStart, shortDate } from '../time';
 	import { Button, Checkbox, SelectField, Toggle } from '../ui';
+	import InstallApp from '#lib/pwa/InstallApp.svelte';
 
 	const app = getApp();
 	const s = $derived(app.settings);
@@ -55,6 +56,12 @@
 	});
 </script>
 
+<h3 class="group-title">Private account</h3>
+<div class="rows">
+	<div class="row"><span>mark@dusseauand.com</span><form action="/auth/logout" method="POST"><Button type="submit">Sign out</Button></form></div>
+</div>
+
+<InstallApp />
 <h3 class="group-title">Your library</h3>
 <div class="rows">
 	<div class="row stats" style:height="72px">
@@ -177,6 +184,7 @@
 
 	.include {
 		display: flex;
+		flex-wrap:wrap;
 		gap: 16px;
 	}
 

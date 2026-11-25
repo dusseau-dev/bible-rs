@@ -26,7 +26,9 @@
 	import Pages from './pages/Pages.svelte';
 	import Palette from './overlays/Palette.svelte';
 	import VerseMenu from './overlays/VerseMenu.svelte';
-	import HighlightBar from './overlays/HighlightBar.svelte';
+	import SelectionToolbar from './overlays/SelectionToolbar.svelte';
+	import QuickStudy from './overlays/QuickStudy.svelte';
+	import ScholarlyFolio from './overlays/ScholarlyFolio.svelte';
 	import NotePopover from './overlays/NotePopover.svelte';
 	import ComparePopover from './overlays/ComparePopover.svelte';
 	import VersePanel from './overlays/VersePanel.svelte';
@@ -86,6 +88,8 @@
 	let systemDark = $state(false);
 	/** A phone's sidebar covers the reader rather than pushing it aside. */
 	let phone = $state(false);
+	/** The study folio uses a bottom sheet until the reader and panel both have room. */
+	let studySheet = $state(false);
 
 	const s = $derived(app.settings);
 	const parallel = $derived(app.columns().length > 1);
@@ -118,6 +122,10 @@
 		phone = narrow.matches;
 		const onNarrow = () => (phone = narrow.matches);
 		narrow.addEventListener('change', onNarrow);
+		const studyNarrow = matchMedia('(max-width: 1240px)');
+		studySheet = studyNarrow.matches;
+		const onStudyNarrow = () => (studySheet = studyNarrow.matches);
+		studyNarrow.addEventListener('change', onStudyNarrow);
 
 		app.adopt(data.restore ? null : addressed(data.translation));
 		requestAnimationFrame(() => (booted = true));
@@ -136,27 +144,10 @@
 		window.addEventListener('storage', onStorage);
 		const backups = setInterval(() => autoBackup(), 3600_000);
 		setTimeout(autoBackup, 10_000);
-		if (!dev && 'serviceWorker' in navigator) {
-			const sw = navigator.serviceWorker;
-			// On a first visit the translations load before the worker takes over, so it hasn't kept them.
-			if (!sw.controller) {
-				sw.addEventListener(
-					'controllerchange',
-					() => {
-						const ids = new Set([...app.loaded, ...app.columns()]);
-						const cache = [...ids]
-							.filter((id) => !app.info(id)?.imported && !app.isLive(id))
-							.map((id) => `/translations/${id}.bbl`);
-						sw.controller?.postMessage({ cache });
-					},
-					{ once: true }
-				);
-			}
-			void sw.register('/service-worker.js', { scope: '/read' }).catch(() => {});
-		}
 		return () => {
 			dark.removeEventListener('change', onDark);
 			narrow.removeEventListener('change', onNarrow);
+			studyNarrow.removeEventListener('change', onStudyNarrow);
 			clearInterval(tick);
 			clearInterval(backups);
 			document.removeEventListener('visibilitychange', onVisibility);
@@ -295,7 +286,7 @@
 	ondrop={drop}
 />
 
-<div class="window" class:booted class:focus={app.focus}>
+<div class="window" class:booted class:focus={app.focus} aria-busy={!app.core && !app.coreError}>
 	{#if app.onboarding}
 		<Onboarding />
 		<Toasts />
@@ -311,7 +302,7 @@
 			<Sidebar />
 		</aside>
 		<main class="main" style:--left="{sidebarShown ? sidebarExtent : 0}px">
-			<div class="reading" style:right="{app.panel && app.page === 'reader' ? INSPECTOR : 0}px">
+			<div class="reading" style:right="{app.studyPassage && !studySheet ? 500 : app.panel && app.page === 'reader' ? INSPECTOR : 0}px">
 				<Reader top={chrome + PAGE_TOP} {chrome} covered={app.page !== 'reader'} />
 				{#if app.page === 'reader' && band > 0}
 					<div class="bands" style:height="{TOOLBAR + band}px"></div>
@@ -338,11 +329,13 @@
 		</main>
 		{#if app.note}{#key app.note}<NotePopover />{/key}{/if}
 		{#if app.compare}<ComparePopover />{/if}
-		{#if app.verseMenu}<VerseMenu />{/if}
-		{#if app.touch && app.selection && app.page === 'reader' && !app.verseMenu && !app.note}<HighlightBar />{/if}
+		{#if app.selectionMore && app.verseMenu}<VerseMenu />{/if}
+		{#if (app.verseMenu || (app.touch && app.selection && app.page === 'reader')) && !app.note && !app.compare && !app.share && !app.studyPassage && !app.selectionAction}<SelectionToolbar />{/if}
+		{#if app.selectionAction && app.selection && app.page === 'reader'}<QuickStudy />{/if}
 		{#if app.palette}<Palette />{/if}
 		{#if app.settingsTab}<SettingsSheet />{/if}
 		{#if app.share}<ShareSheet />{/if}
+		{#if app.studyPassage}<ScholarlyFolio />{/if}
 		{#if app.importSheet}<ImportSheet />{/if}
 		{#if app.shortcuts}<ShortcutsOverlay />{/if}
 		<PageLinks />
@@ -355,7 +348,10 @@
 <style>
 	.window {
 		position: fixed;
-		inset: 0;
+		top: env(safe-area-inset-top, 0px);
+		left: env(safe-area-inset-left, 0px);
+		right: env(safe-area-inset-right, 0px);
+		height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
 		overflow: hidden;
 		background: var(--paper);
 		color: var(--ink);

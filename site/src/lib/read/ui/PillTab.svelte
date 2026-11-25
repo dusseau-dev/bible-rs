@@ -32,9 +32,11 @@
 		transition: background-color var(--motion-fast);
 	}
 
-	.pill:hover:not(.selected) {
+	@media (hover:hover) and (pointer:fine) { .pill:hover:not(.selected) {
 		background: var(--fill);
-	}
+	} }
+	.pill:active { background:var(--fill-strong); }
+	@media (pointer:coarse) { .pill { min-height:44px; min-width:44px; } }
 
 	.selected {
 		background: var(--accent-soft);

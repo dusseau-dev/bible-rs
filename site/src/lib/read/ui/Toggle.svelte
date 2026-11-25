@@ -42,9 +42,7 @@
 		background: var(--accent);
 	}
 
-	.switch:hover:not(:disabled) {
-		background-image: linear-gradient(rgb(0 0 0 / 0.047), rgb(0 0 0 / 0.047));
-	}
+	@media (hover:hover) and (pointer:fine) { .switch:hover:not(:disabled) { background-image:linear-gradient(rgb(0 0 0 / 0.047), rgb(0 0 0 / 0.047)); } }
 
 	.switch:disabled {
 		opacity: var(--disabled-opacity);
@@ -71,4 +69,5 @@
 	.on .knob {
 		transform: translateX(16px);
 	}
+	@media (pointer:coarse) { .switch::after { content:''; position:absolute; inset:-10px -2px; } }
 </style>

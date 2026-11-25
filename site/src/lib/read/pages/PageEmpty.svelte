@@ -42,4 +42,5 @@
 		bottom: 0;
 		left: 40px;
 	}
+	@media (max-width:700px) { .layer { position:relative; inset:auto; } }
 </style>

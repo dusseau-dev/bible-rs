@@ -95,6 +95,7 @@
 		font-weight: 600;
 	}
 
+	@media (hover:hover) and (pointer:fine) {
 	.secondary:hover:not(:disabled),
 	.ghost:hover:not(:disabled) {
 		background-image: linear-gradient(var(--fill), var(--fill));
@@ -103,15 +104,18 @@
 	.plain:hover:not(:disabled) {
 		background: var(--fill-strong);
 	}
+	}
 
 	.secondary:active:not(:disabled),
 	.ghost:active:not(:disabled) {
 		background-image: linear-gradient(var(--fill-strong), var(--fill-strong));
 	}
 
+	@media (hover:hover) and (pointer:fine) {
 	.primary:hover:not(:disabled),
 	.destructive:hover:not(:disabled) {
 		background-image: linear-gradient(var(--hover-wash), var(--hover-wash));
+	}
 	}
 
 	.primary:active:not(:disabled),
@@ -122,4 +126,5 @@
 	.button:disabled {
 		opacity: var(--disabled-opacity);
 	}
+	@media (pointer:coarse) { .button { min-height:44px; min-width:44px; } }
 </style>

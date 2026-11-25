@@ -130,6 +130,27 @@ jobs:
       - name: Site unit tests
         working-directory: site
         run: npm test
+      - name: Site type check
+        working-directory: site
+        run: npm run check
+      - name: Private site production build
+        working-directory: site
+        run: npm run build && npm run check:private-build
+      - name: Browser test dependencies
+        working-directory: site
+        run: |
+          sudo apt-get update && sudo apt-get install -y redis-server
+          npx --no-install playwright install --with-deps chromium webkit
+      - name: Private reader browser tests
+        working-directory: site
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: private-reader-browser-failures
+          path: .context/playwright-results
+          include-hidden-files: true
+          retention-days: 7
 
   ios:
     name: iOS · framework, simulator and device builds

@@ -86,7 +86,7 @@
 	.body {
 		display: flex;
 		gap: 32px;
-		min-height: calc(20px + 21px + 32px * var(--rows) + 8px);
+		min-height: 0;
 		padding: 20px 24px 8px;
 		overflow-y: auto;
 	}
@@ -143,5 +143,12 @@
 		margin: 0;
 		color: var(--ink-3);
 		font: 400 12px/16px var(--font-ui);
+	}
+	@media (max-width:700px) {
+		.head { flex-wrap:wrap; gap:8px; height:auto; padding:12px 16px; flex-shrink:0; }
+		.head :global(.filter) { order:3; width:100%; margin:0; }
+		.body { flex-direction:column; gap:20px; padding:16px; }
+		.column { width:100%; }
+		.foot { flex-wrap:wrap; height:auto; min-height:56px; gap:8px; padding:12px 16px; }
 	}
 </style>

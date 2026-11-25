@@ -51,7 +51,7 @@
 				<PageEmpty
 					glyph="note"
 					title="Your notes will live here"
-					body="Select a verse and press N, or right-click it and choose Add Note. Notes stay in this browser and export to Markdown."
+					body="Tap a verse and choose the note icon. Notes stay in this browser and export to Markdown."
 					hints={[
 						[['N'], 'New note on the selected verse'],
 						[['⌘', 'E'], 'Export as Markdown']
@@ -83,4 +83,5 @@
 		min-height: 100%;
 		padding: calc(var(--toolbar) + 24px) 40px 40px;
 	}
+	@media (max-width:700px) { .content { padding:calc(var(--toolbar) + 20px) 20px 28px; } }
 </style>

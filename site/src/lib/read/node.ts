@@ -1,14 +1,15 @@
 /**
- * The core's files on disk, for prerendering (core.ts imports this only on the server). Paths are
- * relative to site/, where Vite runs; Vercel's build can read ../data because the project includes
- * files outside its root directory.
+ * Server-only Bible files. Vite runs from site/; the Vercel function bundle contains both
+ * site/ and data/ and runs from their parent directory.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-export const wasmBytes = () => readFileSync(resolve('src/lib/read/wasm/bible_bg.wasm'));
+const siteRoot = existsSync(resolve('src/lib/read/wasm/bible_bg.wasm')) ? '.' : 'site';
+
+export const wasmBytes = () => readFileSync(resolve(siteRoot, 'src/lib/read/wasm/bible_bg.wasm'));
 
 export function translationBytes(id: string): Uint8Array {
 	if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`no translation ${id}`);
-	return readFileSync(resolve('../data/translations', `${id}.bbl`));
+	return readFileSync(resolve(siteRoot, '../data/translations', `${id}.bbl`));
 }

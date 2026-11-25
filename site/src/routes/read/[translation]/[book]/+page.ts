@@ -7,7 +7,7 @@ import { contentOptions, defaultTypography } from '#lib/read/settings.js';
 import type { EntryGenerator, PageLoad } from './$types';
 
 /** A book's chapters, each with its opening words: a plain page, no app (see the verse page's +page.ts). */
-export const prerender = true;
+export const prerender = false;
 export const csr = false;
 
 export const entries: EntryGenerator = async () =>

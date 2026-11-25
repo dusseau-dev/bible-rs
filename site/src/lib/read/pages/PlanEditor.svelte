@@ -95,13 +95,14 @@
 	<h2 class="section">Build a schedule</h2>
 	<p class="hint">Books, chapters, or verse ranges — “John, Matthew 5–7, Proverbs 3:5–6”.</p>
 	<label class="named">
+		<span class="label">Passages</span>
 		<TextField bind:value={editor.source} placeholder="John, Matthew 5–7" />
 	</label>
 	<div class="pace">
 		<span class="label">Pace</span>
 		<Segmented options={PACE} bind:value={editor.paceIdx} layout="tight" label="Pace" />
 		{#if editor.paceIdx === 3}
-			<TextField bind:value={editor.inDays} placeholder="30" class="in-days" inputmode="numeric" />
+			<TextField bind:value={editor.inDays} placeholder="30" aria-label="Number of days" class="in-days" inputmode="numeric" />
 		{/if}
 	</div>
 	<Button kind="secondary" label="Fill days" disabled={!editor.source.trim()} onclick={fill} />
@@ -110,7 +111,7 @@
 		{#each editor.days as _day, i (i)}
 			<li class="day">
 				<span class="num">{i + 1}</span>
-				<TextField bind:value={editor.days[i]} placeholder="John 1 · Proverbs 3" />
+				<TextField bind:value={editor.days[i]} placeholder="John 1 · Proverbs 3" aria-label="Day {i + 1} passages" />
 				{#if i > 0}
 					<RoundButton
 						icon="chevron-up"
@@ -260,4 +261,9 @@
 		gap: 8px;
 		margin-top: 20px;
 	}
+	@media (max-width:700px) {
+		.day { flex-wrap:wrap; justify-content:flex-end; }
+		.day :global(.field) { flex-basis:calc(100% - 28px); min-width:0; }
+	}
+	@media (pointer:coarse) { .crumb { height:auto; min-height:44px; } .crumb button { min-height:44px; } }
 </style>

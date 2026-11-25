@@ -57,7 +57,6 @@
 		transition: background-color var(--motion-fast);
 	}
 
-	.button:hover:not(:disabled),
 	.button.open {
 		background: var(--fill);
 	}
@@ -66,8 +65,7 @@
 		background: var(--fill-strong);
 	}
 
-	.button.on,
-	.button.on:hover {
+	.button.on {
 		background: var(--accent-soft);
 		color: var(--accent);
 	}
@@ -75,4 +73,8 @@
 	.button:disabled {
 		color: var(--ink-3);
 	}
+	@media (hover: hover) and (pointer: fine) {
+		.button:hover:not(:disabled):not(.on) { background: var(--fill); }
+	}
+	@media (pointer: coarse) { .button { min-width:44px; min-height:44px; } }
 </style>

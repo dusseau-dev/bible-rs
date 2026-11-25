@@ -85,4 +85,5 @@
 		color: var(--ink-3);
 		opacity: 1;
 	}
+	@media (pointer:coarse) { .field { min-height:44px; min-width:0; } }
 </style>

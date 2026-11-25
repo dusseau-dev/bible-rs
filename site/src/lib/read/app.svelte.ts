@@ -53,6 +53,7 @@ import {
 	type Theme
 } from './settings';
 import { dayStart } from './time';
+import type { StudyPassage } from './study';
 
 export type Page = 'reader' | 'translations' | 'bookmarks' | 'highlights' | 'notes' | 'history' | 'plans';
 export type SettingsTab = 'reading' | 'appearance' | 'translations' | 'shortcuts' | 'data' | 'about';
@@ -115,6 +116,7 @@ export type Action =
 	| { type: 'copy' }
 	| { type: 'openVerseMenu'; x: number; y: number }
 	| { type: 'shareImage' }
+	| { type: 'goDeeper'; category?: import('./study-items').Category | 'all' }
 	| { type: 'compare' }
 	| { type: 'clearSelection' }
 	| { type: 'selectNext' }
@@ -223,7 +225,7 @@ export class ReadApp {
 	/** Words chosen in the reader (a text selection) and their parallel column; the verses they
 	 *  touch are the selection, and they go when it changes to anything else. */
 	words = $state.raw<Words | null>(null);
-	/** The reader was last pressed by touch (or a pen): the highlight bar shows for its selection. */
+	/** The reader was last pressed by touch (or a pen): show the passage toolbar for its selection. */
 	touch = $state(false);
 	/** Chosen words kept while the pointer is pressed outside the text (a menu, the highlight bar),
 	 *  which may take the page's selection away. */
@@ -236,12 +238,16 @@ export class ReadApp {
 	settingsTab = $state<SettingsTab | null>(null);
 	shortcuts = $state(false);
 	verseMenu = $state.raw<{ x: number; y: number } | null>(null);
+	selectionMore = $state(false);
+	selectionAction = $state<'ask' | 'explain' | 'simplify' | 'define' | null>(null);
 	/** The verse whose note popover is open. */
 	note = $state.raw<VerseRef | null>(null);
 	/** Compare as a popover on the selected verse, or as the inspector beside parallel columns. */
 	compare = $state.raw<VerseRef | null>(null);
 	panel = $state.raw<VerseRef | null>(null);
 	share = $state.raw<VerseRef[] | null>(null);
+	studyPassage = $state.raw<StudyPassage | null>(null);
+	studyCategory = $state<import('./study-items').Category | 'all'>('all');
 	importSheet = $state(false);
 	textPopover = $state(false);
 	focus = $state(false);
@@ -1194,11 +1200,34 @@ export class ReadApp {
 				break;
 			}
 			case 'openVerseMenu':
-				if (this.selectedRefs().length) this.verseMenu = { x: a.x, y: a.y };
+				if (this.selectedRefs().length) {
+					this.selectionAction = null;
+					this.selectionMore = false;
+					this.verseMenu = { x: a.x, y: a.y };
+				}
 				break;
 			case 'shareImage': {
 				const refs = this.selectedRefs();
 				if (refs.length) this.share = refs;
+				break;
+			}
+			case 'goDeeper': {
+				this.studyCategory = a.category ?? 'all';
+				if (this.selection && (this.selection[0].book !== this.selection[1].book || this.selection[0].chapter !== this.selection[1].chapter)) {
+					this.toastNow('Choose verses within one chapter to go deeper');
+					break;
+				}
+				const refs = this.selectedRefs();
+				if (refs.length > 30) {
+					this.toastNow('Go deeper supports up to 30 verses at a time');
+					break;
+				}
+				if (refs.length) this.studyPassage = {
+					book: refs[0].book,
+					chapter: refs[0].chapter,
+					firstVerse: refs[0].verse,
+					lastVerse: refs[refs.length - 1].verse
+				};
 				break;
 			}
 			case 'compare': {

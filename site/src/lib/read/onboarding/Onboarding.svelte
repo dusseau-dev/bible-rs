@@ -104,7 +104,7 @@
 				<p class="lede">Just the Bible — fast, beautifully typeset, and kept in this browser.</p>
 				<div class="choose">
 					<h2>Choose a translation to start with</h2>
-					<span>Public domain · works offline · more in Settings</span>
+					<span>Public domain · private sign-in · internet required</span>
 				</div>
 				<div class="cards" role="radiogroup" aria-label="Translation">
 					{#each samples?.john ?? [] as t (t.id)}

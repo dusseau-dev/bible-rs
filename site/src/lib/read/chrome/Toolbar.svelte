@@ -31,8 +31,9 @@
 	const LEADING_INSET = 20;
 	const LEADING_INSET_SIDEBAR = 8;
 	const GROUP_GAP = 8;
-	const BUTTON = 36;
-	const TOGGLE = 40;
+	let touch = $state(false);
+	const BUTTON = $derived(touch ? 44 : 36);
+	const TOGGLE = $derived(touch ? 44 : 40);
 	const TRAILING_INSET = 16;
 	const FIELD = 176;
 	const FIELD_COMPACT = 136;
@@ -50,10 +51,18 @@
 	};
 
 	let windowWidth = $state(0);
+	let measuredWidth = $state(0);
 	let pickersWidth = $state(0);
 	/** Shortcuts in tooltips name this platform's keys, so they wait for the browser. */
 	let mounted = $state(false);
-	onMount(() => (mounted = true));
+	onMount(() => {
+		mounted = true;
+		const media = matchMedia('(pointer: coarse)');
+		const update = () => { touch = media.matches; };
+		update();
+		media.addEventListener('change', update);
+		return () => media.removeEventListener('change', update);
+	});
 
 	let bookOpen = $state(false);
 	let translationOpen = $state(false);
@@ -70,8 +79,9 @@
 	const reading = $derived(app.page === 'reader');
 	const shown = $derived(sidebarShown && sidebar > 0);
 	/** Judged at the width the bar is heading for, so a sliding sidebar switches it at once. */
-	const barWidth = $derived(windowWidth - (sidebarShown ? sidebar : 0));
+	const barWidth = $derived(measuredWidth || windowWidth - (sidebarShown ? sidebar : 0));
 	const compact = $derived(windowWidth > 0 && barWidth < COMPACT);
+	const narrow = $derived(windowWidth > 0 && barWidth < 600);
 	const showField = $derived(!compact || wantField || search.searching || search.fieldFocused);
 	const fieldWidth = $derived(compact ? FIELD_COMPACT : FIELD);
 	const trailingLeft = $derived(
@@ -87,7 +97,7 @@
 	 *  end; null until measured (centred by CSS), -1 when there's no room. */
 	const pickersLeft = $derived.by((): number | null => {
 		if (!windowWidth || !pickersWidth) return null;
-		const lo = navRight + GROUP_GAP;
+		const lo = (narrow ? LEADING_INSET + TOGGLE : navRight) + GROUP_GAP;
 		const hi = trailingLeft - GROUP_GAP - pickersWidth;
 		if (hi < lo) return -1;
 		return Math.round(Math.max(lo, Math.min(hi, centre - pickersWidth / 2)));
@@ -157,7 +167,7 @@
 
 <svelte:window bind:innerWidth={windowWidth} />
 
-<div class="toolbar" class:material>
+<div class="toolbar" class:material bind:clientWidth={measuredWidth}>
 	<div class="slot toggle" class:away={shown} style:left="{LEADING_INSET}px">
 		<Capsule>
 			<ToolbarButton
@@ -169,7 +179,7 @@
 		</Capsule>
 	</div>
 
-	<div class="slot nav" style:left="{navLeft}px">
+	<div class="slot nav" hidden={narrow} style:left="{navLeft}px">
 		<Capsule dividers label="History">
 			<ToolbarButton
 				icon="chevron-left"
@@ -187,9 +197,12 @@
 	</div>
 
 	{#if !reading}
+		{#if narrow}
+			<div class="slot" style:left="{LEADING_INSET + TOGGLE + GROUP_GAP}px"><Capsule><ToolbarButton icon="chevron-left" label="Back to reader" onclick={() => app.dispatch({ type:'back' })} /></Capsule></div>
+		{/if}
 		<div class="slot" style:right="{TRAILING_INSET}px">
 			<SearchField
-				width={PAGE_FIELD}
+				width={narrow ? Math.min(PAGE_FIELD, barWidth - LEADING_INSET - TOGGLE - GROUP_GAP * 2 - BUTTON - TRAILING_INSET) : PAGE_FIELD}
 				placeholder={PLACEHOLDERS[app.page]}
 				aria-label={PLACEHOLDERS[app.page]}
 				bind:value={app.pageQuery}
@@ -214,7 +227,7 @@
 						bind:el={bookEl}
 						onclick={() => app.core && (bookOpen = !bookOpen)}
 					/>
-					{#if s.toolbarTranslation}
+					{#if s.toolbarTranslation && !narrow}
 						<Picker
 							text={abbrevs}
 							label={tip('Translation', cmdText('1…9'))}
@@ -296,6 +309,12 @@
 		highlight={app.demo.more && app.demo.more !== 'true' ? Number(app.demo.more) : undefined}
 		onclose={() => (moreOpen = false)}
 	>
+		{#if narrow}
+			<MenuItem icon="chevron-left" label="Back" disabled={!(app.history.back.length > 0 || !reading)} onclick={() => more({ type: 'back' })} />
+			<MenuItem icon="chevron-right" label="Forward" disabled={!(app.history.forward.length > 0 && reading)} onclick={() => more({ type: 'forward' })} />
+			<MenuItem icon="book" label="Translation" onclick={() => { moreOpen = false; translationEl = moreEl; translationOpen = true; }} />
+			<MenuSeparator />
+		{/if}
 		<MenuItem
 			icon="columns"
 			label="Parallel Translations"
@@ -303,6 +322,7 @@
 			onclick={() => more({ type: 'toggleParallel' })}
 		/>
 		<MenuItem icon="text-size" label="Text & Layout" shortcut={cmdText('T')} onclick={() => more({ type: 'textFormat' })} />
+		<MenuItem label="Settings" onclick={() => more({ type: 'openSettings', tab: 'reading' })} />
 		<MenuSeparator />
 		<MenuItem
 			icon="sidebar"

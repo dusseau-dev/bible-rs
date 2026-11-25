@@ -653,4 +653,19 @@
 		gap: 8px;
 		margin-top: 12px;
 	}
+	@media (max-width:1000px) {
+		.body { flex-direction:column; }
+		.main, .side { width:100%; min-width:0; }
+		.head { flex-wrap:wrap; gap:8px; }
+		.steps { margin-top:0; }
+		.strip { overflow-x:auto; overscroll-behavior-x:contain; }
+		.cell { flex:none; }
+		.reading { flex-wrap:wrap; height:auto; min-height:88px; padding:12px; gap:8px; }
+		.size { display:none; }
+	}
+	@media (pointer:coarse) {
+		.crumb { height:auto; min-height:44px; }
+		.crumb button, .tick { min-width:44px; min-height:44px; }
+		.steps { grid-template-columns:44px 44px; }
+	}
 </style>

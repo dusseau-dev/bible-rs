@@ -10,7 +10,7 @@
 	import { parseReference, type VerseRef } from '../core';
 	import ListItem from '../sidebar/ListItem.svelte';
 	import { ago, shortDate } from '../time';
-	import { Icon, Menu, MenuItem, Popover, RoundButton, Segmented, TextField } from '../ui';
+	import { Button, Icon, Menu, MenuItem, Popover, RoundButton, Segmented, TextField } from '../ui';
 	import { apply, lines, mentioned, notesPage, plain, sameVerse, stylesAt, type Tool } from './notes.svelte';
 
 	let { top }: { top: number } = $props();
@@ -42,6 +42,7 @@
 	const setText = (body: string) => selected && (typed = { verse: selected, text: body });
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let editing = $state(false);
+	let mobileEditor = $state(false);
 	let field = $state<HTMLTextAreaElement>();
 	let caret = $state(0);
 
@@ -60,6 +61,7 @@
 		flush();
 		editing = false;
 		notesPage.selected = v;
+		mobileEditor = true;
 	}
 
 	onDestroy(flush);
@@ -131,6 +133,7 @@
 		app.dispatch({ type: 'removeNote', verse: selected });
 		notesPage.selected = null;
 		editing = false;
+		mobileEditor = false;
 	}
 
 	function copy(body: string, toast?: string) {
@@ -185,7 +188,7 @@
 	];
 </script>
 
-<div class="notes" style:--toolbar="{top}px">
+<div class="notes" class:mobile-editor={mobileEditor} style:--toolbar="{top}px">
 	<div class="list-pane">
 		<div class="list-head">
 			<h1 class="title">Notes</h1>
@@ -224,6 +227,7 @@
 		{@const m = marks(v)}
 		<div class="editor-pane">
 			<div class="editor">
+				<div class="mobile-back"><Button kind="plain" icon="chevron-left" label="Back to notes" onclick={() => { flush(); editing = false; mobileEditor = false; }} /></div>
 				<div class="editor-head">
 					<h2 class="title">{app.label(v)}</h2>
 					<div class="actions">
@@ -440,7 +444,7 @@
 	.actions {
 		display: flex;
 		gap: 4px;
-		width: 140px;
+		flex-shrink: 0;
 	}
 
 	.meta {
@@ -646,5 +650,22 @@
 		width: 220px;
 		padding: 12px;
 		color: var(--ink-2);
+	}
+	.mobile-back { display:none; }
+	@media (max-width:700px) {
+		.list-pane { width:100%; padding:calc(var(--toolbar) + 20px) 20px 0; }
+		.sub { height:auto; min-height:48px; }
+		.editor-pane { display:none; }
+		.mobile-editor .list-pane { display:none; }
+		.mobile-editor .editor-pane { display:block; }
+		.editor { padding:calc(var(--toolbar) + 12px) 20px 28px; }
+		.mobile-back { display:block; margin-bottom:12px; }
+		.editor-head, .tools { flex-wrap:wrap; gap:8px; }
+		.body { min-height:120px; }
+	}
+	@media (pointer:coarse) {
+		.format { height:44px; }
+		.tool { width:44px; height:44px; }
+		.chip { min-height:44px; }
 	}
 </style>

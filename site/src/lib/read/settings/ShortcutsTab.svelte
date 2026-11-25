@@ -87,14 +87,16 @@
 <style>
 	.tools {
 		display: flex;
+		flex-wrap:wrap;
+		gap:12px;
 		align-items: center;
 		justify-content: space-between;
-		height: 32px;
+		min-height:32px;
 		margin-bottom: 24px;
 	}
 
 	.tools :global(.filter) {
-		width: 320px;
+		width:min(100%,320px);
 	}
 
 	.caps {
