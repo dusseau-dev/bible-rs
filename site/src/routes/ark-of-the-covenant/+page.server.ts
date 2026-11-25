@@ -9,7 +9,7 @@ import type { PageServerLoad } from './$types';
  * the 3D viewer, the dimensions, every part with its KJV verses, and the questions people ask.
  * The text is all in the prerendered HTML; only the viewer needs the page's JavaScript.
  */
-export const prerender = true;
+export const prerender = false;
 
 /** 45, 27.5: inches to a tenth, without a trailing ".0". */
 const inches = (n: number) => String(Number(n.toFixed(1)));

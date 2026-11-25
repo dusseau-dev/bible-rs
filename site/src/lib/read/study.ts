@@ -83,6 +83,8 @@ export interface StudyTestimonial {
 }
 
 export interface StudyResult {
+	/** Additive for older clients; completed with no results differs from not searched. */
+	discovery?: Record<DiscoveryKind, DiscoveryStatus>;
 	reference: string;
 	passageText: string;
 	contextText: string;
@@ -96,6 +98,10 @@ export interface StudyResult {
 	answer: { text: string; sourceIds: string[] } | null;
 	message?: string;
 }
+
+export type DiscoveryKind = 'sources' | 'testimonials' | 'papers' | 'videos';
+export type DiscoveryStatus = 'complete' | 'disabled' | 'rate_limited' | 'failed' | 'partial';
+export interface DiscoveryResult<T> { items: T[]; status: DiscoveryStatus }
 
 export interface StudyRequest {
 	passage: StudyPassage;

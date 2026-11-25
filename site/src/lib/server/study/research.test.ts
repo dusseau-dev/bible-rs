@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { sourcesFromExa } from './research';
 
 describe('external study discovery', () => {
+	it('does not mistake John 3:16 for John 3:1', () => {
+		const [source] = sourcesFromExa([{ title: 'John 3:16', url: 'https://ccel.org/note', highlights: ['A note about John 3:16.'] }], { book: 42, chapter: 3, firstVerse: 1, lastVerse: 1 });
+		expect(source.scope).toBe('related');
+	});
 	it('keeps only approved HTTPS sources and labels uncertain coverage', () => {
 		const sources = sourcesFromExa([
 			{ title: 'John 3:16 footnote', url: 'https://bible.usccb.org/bible/john/3', highlights: ['A passage-specific note'] },

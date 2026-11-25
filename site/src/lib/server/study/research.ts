@@ -23,6 +23,8 @@ interface ExaResult {
 
 export function sourcesFromExa(results: ExaResult[], p: StudyPassage): StudySource[] {
 	const reference = passageLabel(p);
+	const firstVerse = `${reference.split(':')[0]}:${p.firstVerse}`.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const exactReference = new RegExp(`\\b${firstVerse}(?!\\d)`, 'i');
 	const seen = new Set<string>();
 	return results.flatMap((item, i) => {
 		if (!item.url || !allowed(item.url) || seen.has(item.url)) return [];
@@ -31,7 +33,7 @@ export function sourcesFromExa(results: ExaResult[], p: StudyPassage): StudySour
 		const host = new URL(url).hostname;
 		const excerpt = (item.highlights?.join(' … ') || item.text || '').replace(/\s+/g, ' ').trim().slice(0, 500);
 		const title = (item.title || host).trim().slice(0, 180);
-		const direct = Boolean(excerpt) && `${title} ${excerpt}`.toLowerCase().includes(`${reference.split(':')[0]}:${p.firstVerse}`.toLowerCase());
+		const direct = Boolean(excerpt) && exactReference.test(`${title} ${excerpt}`);
 		return [{
 			id: `web:${i}:${url}`,
 			title,

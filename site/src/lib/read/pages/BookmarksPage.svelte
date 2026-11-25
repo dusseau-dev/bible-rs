@@ -57,7 +57,7 @@
 	<PageEmpty
 		glyph="bookmark"
 		title="Your bookmarks will live here"
-		body="Select a verse and press B, or right-click it and choose Bookmark. Bookmarks stay in this browser and export with your notes."
+		body="Tap a verse, open More actions, and choose Bookmark. Bookmarks stay in this browser and export with your notes."
 		hints={[[['B'], 'Bookmark the selected verse']]}
 	/>
 {:else}
@@ -197,5 +197,13 @@
 	.row:hover .date,
 	.row:focus-within .date {
 		display: none;
+	}
+	@media (pointer:coarse) {
+		.row { padding-bottom:58px; }
+		.tools { display:flex; top:auto; bottom:8px; }
+		.date { display:none; }
+		.text { max-width:100%; }
+		.reference { min-height:44px; }
+		.ref { height:auto; }
 	}
 </style>

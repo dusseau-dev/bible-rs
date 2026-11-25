@@ -3,7 +3,7 @@ import { sitemaps, urlsetResponse } from '#lib/read/seo/sitemap.js';
 import type { EntryGenerator, RequestHandler } from './$types';
 
 /** The sitemap files the index at /sitemap.xml lists. */
-export const prerender = true;
+export const prerender = false;
 
 export const entries: EntryGenerator = async () => (await sitemaps()).map(({ file }) => ({ file }));
 

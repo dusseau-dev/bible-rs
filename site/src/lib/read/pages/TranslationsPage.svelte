@@ -226,18 +226,18 @@
 	{@const isDefault = t?.id === app.settings.translation}
 	{#if t}
 		<Menu anchor={more.el} align="end" width={180} onclose={() => (more = null)} label="More for {t.name}">
-			<MenuItem label="Read" onclick={() => ((more = null), read(t.id))} />
+			<MenuItem label="Read" onclick={() => { const id = t.id; more = null; read(id); }} />
 			<MenuItem
 				label="Make Default"
 				disabled={isDefault}
-				onclick={() => ((more = null), app.dispatch({ type: 'setTranslation', id: t.id }))}
+				onclick={() => { const id = t.id; more = null; app.dispatch({ type: 'setTranslation', id }); }}
 			/>
-			<MenuItem label="Read in Parallel" disabled={isDefault} onclick={() => ((more = null), parallel(t.id))} />
+			<MenuItem label="Read in Parallel" disabled={isDefault} onclick={() => { const id = t.id; more = null; parallel(id); }} />
 			{#if t.imported}
 				<MenuSeparator />
 				<MenuItem
 					label="Remove…"
-					onclick={() => ((more = null), app.dispatch({ type: 'removeTranslation', id: t.id }))}
+					onclick={() => { const id = t.id; more = null; app.dispatch({ type: 'removeTranslation', id }); }}
 				/>
 			{/if}
 		</Menu>
@@ -498,4 +498,14 @@
 		gap: 8px;
 		margin-top: 16px;
 	}
+	@media (max-width:1000px) {
+		.body { flex-direction:column; }
+		.list, .inspector { width:100%; min-width:0; }
+		.size, .badges { display:none; }
+		.filters { height:auto; flex-wrap:wrap; gap:8px; }
+		.tabs { flex-wrap:wrap; }
+		.row { padding:0 8px; }
+		.titles { margin-left:10px; }
+	}
+	@media (pointer:coarse) { .more, .sort { min-width:44px; min-height:44px; } }
 </style>

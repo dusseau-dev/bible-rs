@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "Private Bible",
+  "short_name": "Bible",
+  "description": "Your private Bible reader and study companion.",
+  "lang": "en",
+  "start_url": "/read",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fffdf7",
+  "theme_color": "#fffdf7",
+  "icons": [
+    { "src": "/icon.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}

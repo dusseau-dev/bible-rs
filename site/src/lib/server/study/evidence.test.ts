@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { localEvidence, passageFrom, passageVideos } from './evidence';
+import { bookContextNotes, localEvidence, passageFrom, passageVideos } from './evidence';
 
 describe('passage study evidence', () => {
 	it('rejects invalid and overlong selections', () => {
@@ -25,5 +25,39 @@ describe('passage study evidence', () => {
 		expect(found.every((video) => video.scope === 'direct' && video.verification === 'video link only')).toBe(true);
 		expect(passageVideos({ book: 42, chapter: 3, firstVerse: 16, lastVerse: 16 })).toEqual([]);
 		expect(passageVideos({ book: 0, chapter: 3, firstVerse: 7, lastVerse: 7 }).map((video) => video.format)).toEqual(['short', 'full']);
+	});
+
+	it('picks earlier-book notes that together cover the most history topics', () => {
+		const note = (id: string, from: [number, number], to: [number, number], text: string) => ({ id, title: id, from, to, text });
+		const book = {
+			'1': { notes: [
+				note('river', [1, 1], [1, 2], 'They camped by the river.'),
+				note('tax', [1, 3], [1, 4], 'The king raised a tax on silver.'),
+				note('plain', [1, 5], [1, 5], 'He spoke to them.'),
+				note('span', [1, 6], [2, 4], 'The temple stood near the wall.')
+			] },
+			'2': { notes: [
+				note('river-late', [2, 1], [2, 2], 'A second river crossing.'),
+				note('span', [1, 6], [2, 4], 'The temple stood near the wall.'),
+				note('after', [2, 9], [2, 9], 'The army marched by the sea.')
+			] }
+		};
+		const start = 2 * 1000 + 8;
+		const picked = bookContextNotes(book, start, 3).map((n) => n.id);
+		// Ties go to the note nearest the passage; the cross-chapter note appears once.
+		expect(picked).toEqual(['span', 'tax', 'river-late']);
+		expect(bookContextNotes(book, start).map((n) => n.id)).not.toContain('after');
+		expect(bookContextNotes(book, start).map((n) => n.id)).not.toContain('plain');
+		expect(bookContextNotes(book, 1000 + 1)).toEqual([]);
+	});
+
+	it('adds earlier-book study notes as related background for later passages', async () => {
+		const later = await localEvidence({ book: 40, chapter: 6, firstVerse: 14, lastVerse: 29 });
+		const related = later.sources.filter((source) => source.kind === 'study_note' && source.scope === 'related');
+		expect(related.length).toBeGreaterThan(0);
+		expect(related.length).toBeLessThanOrEqual(6);
+		expect(new Set(later.sources.map((source) => source.id)).size).toBe(later.sources.length);
+		const first = await localEvidence({ book: 0, chapter: 1, firstVerse: 1, lastVerse: 1 });
+		expect(first.sources.some((source) => source.scope === 'related' && source.kind === 'study_note')).toBe(false);
 	});
 });

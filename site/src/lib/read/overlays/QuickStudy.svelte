@@ -8,7 +8,12 @@
 	const refs = app.selectedRefs();
 	const passage: StudyPassage = { book: refs[0].book, chapter: refs[0].chapter, firstVerse: refs[0].verse, lastVerse: refs[refs.length - 1].verse };
 	const signature = `${passage.book}:${passage.chapter}:${passage.firstVerse}:${passage.lastVerse}`;
-	let mode = $state<'ask' | 'explain' | 'simplify'>(app.selectionAction!);
+	let mode = $state<'ask' | 'explain' | 'simplify' | 'define'>(app.selectionAction!);
+	const words = app.wordSpan();
+	const selectedWords = words ? app.core?.copySpan(words.translation, words.span, 'plain')?.trim() : '';
+	const definitionQuestion = selectedWords
+		? `Define these selected words as this author uses them in context: ${selectedWords.slice(0, 350)}`
+		: 'Define the key words in this passage as this author uses them in context.';
 	let question = $state('');
 	let result = $state<StudyResult | null>(null);
 	let error = $state('');
@@ -34,7 +39,7 @@
 		try {
 			const response = await fetch('/api/study', {
 				method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store', signal: current.signal,
-				body: JSON.stringify({ passage, mode: mode === 'ask' ? 'ask' : 'explain', question: mode === 'ask' ? question.trim() : undefined, style: mode === 'simplify' ? 'simple' : 'standard' })
+				body: JSON.stringify({ passage, mode: mode === 'ask' || mode === 'define' ? 'ask' : 'explain', question: mode === 'define' ? definitionQuestion : mode === 'ask' ? question.trim() : undefined, style: mode === 'simplify' ? 'simple' : 'standard' })
 			});
 			const data = await response.json();
 			if (!response.ok) throw new Error(data.error || 'The explanation could not load');
@@ -58,10 +63,11 @@
 
 <Popover {anchor} side="bottom" align="center" gap={10} onclose={close} label="Passage {mode}" radius={15} class="quick-study">
 	<div class="card">
-		<div class="head"><strong>{mode === 'ask' ? 'Ask about this passage' : mode === 'simplify' ? 'Explain simply' : 'Explain'}</strong><button type="button" class="close" aria-label="Close" onclick={close}><Icon name="close" size={18} /></button></div>
+		<div class="head"><strong>{mode === 'ask' ? 'Ask about this passage' : mode === 'define' ? 'Define in context' : mode === 'simplify' ? 'Explain simply' : 'Explain'}</strong><button type="button" class="close" aria-label="Close" onclick={close}><Icon name="close" size={18} /></button></div>
 		<div class="actions" role="group" aria-label="Passage study actions">
 			<button type="button" class:active={mode === 'ask'} aria-pressed={mode === 'ask'} onclick={() => switchMode('ask')}>Ask</button>
 			<button type="button" class:active={mode === 'explain'} aria-pressed={mode === 'explain'} onclick={() => switchMode('explain')}>Explain</button>
+			<button type="button" class:active={mode === 'define'} aria-pressed={mode === 'define'} onclick={() => switchMode('define')}>Define</button>
 			<button type="button" class:active={mode === 'simplify'} aria-pressed={mode === 'simplify'} onclick={() => switchMode('simplify')}>Explain simply</button>
 			<button type="button" onclick={() => { close(); app.dispatch({ type: 'goDeeper' }); }}>Deep study</button>
 		</div>
@@ -76,12 +82,12 @@
 		{#if result?.message}<p class="message">{result.message}</p>{/if}
 		{#if result}
 			{#if result.answer || result.guide.some((step) => step.answer)}<p class="source-note">Based on the World English Bible.</p>{/if}
-			{#if mode === 'ask' && result.answer}<p class="answer">{result.answer.text}</p><div class="citations">{#each cited(result.answer.sourceIds) as source}<a href={source?.url} target="_blank" rel="noopener noreferrer">{source?.title} <Icon name="external" size={12} /></a>{/each}</div>
-			{:else if mode !== 'ask'}
+			{#if (mode === 'ask' || mode === 'define') && result.answer}<p class="answer">{result.answer.text}</p><div class="citations">{#each cited(result.answer.sourceIds) as source}<a href={source?.url} target="_blank" rel="noopener noreferrer">{source?.title} <Icon name="external" size={12} /></a>{/each}</div>
+			{:else if mode !== 'ask' && mode !== 'define'}
 				{#each result.guide.filter((step) => step.answer).slice(0, mode === 'simplify' ? 2 : 4) as step}<p class="answer"><b>{step.id === 'christ' ? 'Connect to Christ' : step.id[0].toUpperCase() + step.id.slice(1)}.</b> {step.answer}</p><div class="citations">{#each cited(step.sourceIds) as source}<a href={source?.url} target="_blank" rel="noopener noreferrer">{source?.title} <Icon name="external" size={12} /></a>{/each}</div>{/each}
 				{#if !result.guide.some((step) => step.answer) && result.answer}<p class="answer">{result.answer.text}</p><div class="citations">{#each cited(result.answer.sourceIds) as source}<a href={source?.url} target="_blank" rel="noopener noreferrer">{source?.title} <Icon name="external" size={12} /></a>{/each}</div>{/if}
 			{/if}
-			{#if mode === 'ask' && !result.answer && !result.message}<p class="message">The sources do not support an answer to that question yet.</p>{/if}
+			{#if (mode === 'ask' || mode === 'define') && !result.answer && !result.message}<p class="message">The sources do not support an answer to that question yet.</p>{/if}
 		{/if}
 	</div>
 </Popover>
@@ -89,13 +95,15 @@
 <style>
 	:global(.quick-study) { background:#fffdf7 !important; border:1px solid #d6d1c4; box-shadow:0 15px 34px #0002; }
 	.card { width:min(560px,calc(100vw - 32px)); max-height:min(70dvh,650px); overflow:auto; padding:18px; color:#263442; }
+	.card { overscroll-behavior:contain; }
 	.head { display:flex; justify-content:space-between; align-items:center; gap:12px; font:18px Georgia,serif; }
 	.head .close { display:grid; place-items:center; width:32px; height:32px; color:#52616a; border-radius:8px; }
-	.head .close:hover { background:#f0eee7; }
+	.head .close:active { background:#f0eee7; }
 	.actions { display:flex; gap:16px; overflow-x:auto; border-bottom:1px solid #ddd8cd; margin:10px 0 14px; scrollbar-width:none; }
 	.actions::-webkit-scrollbar { display:none; }
 	.actions button { flex:none; min-height:40px; border-bottom:2px solid transparent; color:#52616a; font-size:12px; white-space:nowrap; }
-	.actions button:hover,.actions button.active { color:#264c46; }
+	.actions button.active { color:#264c46; }
+	@media (hover:hover) and (pointer:fine) { .head .close:hover { background:#f0eee7; } .actions button:hover { color:#264c46; } }
 	.actions button.active { border-bottom-color:#396e61; font-weight:700; }
 	form { display:flex; gap:8px; }
 	form input { min-height:44px; flex:1; min-width:0; padding:9px 12px; border:1px solid #c9cec7; border-radius:9px; background:white; color:#263442; font:14px Arial,sans-serif; }
@@ -106,5 +114,6 @@
 	.answer { font:15px/1.55 Georgia,serif; }
 	.citations a { display:inline-flex; align-items:center; gap:3px; color:#365e56; font-size:11px; }
 	.error { color:#9d3e35; }
-	@media (max-width:600px) { :global(.quick-study) { left:8px !important; right:8px !important; top:auto !important; bottom:8px !important; border-radius:20px !important; } .card { width:auto; max-height:min(70dvh,650px); } form { flex-direction:column; } .submit { align-self:flex-start; min-width:92px; min-height:40px; } }
+	@media (pointer:coarse) { .head .close, .actions button, .submit { min-height:44px; min-width:44px; } }
+	@media (max-width:600px) { :global(.quick-study) { left:max(8px,env(safe-area-inset-left)) !important; right:max(8px,env(safe-area-inset-right)) !important; top:auto !important; bottom:calc(var(--keyboard-inset, 0px) + max(8px,env(safe-area-inset-bottom))) !important; border-radius:20px !important; } .card { width:auto; max-height:calc(var(--visual-height, 100dvh) - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); } form { flex-direction:column; } .submit { align-self:flex-start; min-width:92px; min-height:44px; } }
 </style>

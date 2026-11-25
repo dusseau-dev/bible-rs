@@ -1,10 +1,9 @@
-import { Redis } from '@upstash/redis';
+import { redis } from '#lib/redis.js';
 import { BOOKS } from '#lib/read/books.js';
-import type { StudyPaper, StudyPassage } from '#lib/read/study.js';
+import type { DiscoveryResult, StudyPaper, StudyPassage } from '#lib/read/study.js';
 import { allowPaperSearch } from './limits.js';
 
 const CACHE_SECONDS = 7 * 24 * 60 * 60;
-const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN ? Redis.fromEnv() : null;
 
 /** Reviewed open access paper for the passage used in the first study experience. */
 const REVIEWED: Array<StudyPaper & { book: number; chapter: number; firstVerse: number; lastVerse: number }> = [
@@ -80,15 +79,16 @@ export function mergePapers(reviewed: StudyPaper[], discovered: StudyPaper[]): S
 }
 
 /** Search only title/abstract metadata; do not fetch or submit paper bodies to the model. */
-export async function passagePapers(p: StudyPassage, key: string | undefined, client: string): Promise<StudyPaper[]> {
+export async function passagePapers(p: StudyPassage, key: string | undefined, client: string): Promise<DiscoveryResult<StudyPaper>> {
 	const reviewed = reviewedPapers(p);
-	if (!key || !redis) return reviewed;
+	if (!key || !redis) return { items: reviewed, status: 'disabled' };
 	const cacheKey = `bible:study:papers:${p.book}:${p.chapter}:${p.firstVerse}:${p.lastVerse}`;
 	try {
 		const cached = await redis.get<StudyPaper[]>(cacheKey);
-		if (cached) return mergePapers(reviewed, cached);
+		if (cached) return { items: mergePapers(reviewed, cached), status: 'complete' };
 	} catch { /* Reviewed links remain available. */ }
-	if (!await allowPaperSearch(client)) return reviewed;
+	const permission = await allowPaperSearch(client);
+	if (permission !== 'allowed') return { items: reviewed, status: permission };
 	const url = new URL('https://api.openalex.org/works');
 	url.searchParams.set('search.title_and_abstract', `${BOOKS[p.book].name} ${p.chapter}`);
 	url.searchParams.set('filter', 'is_oa:true,is_retracted:false');
@@ -96,10 +96,10 @@ export async function passagePapers(p: StudyPassage, key: string | undefined, cl
 	url.searchParams.set('select', 'id,display_name,doi,publication_year,type,authorships,primary_location,best_oa_location');
 	try {
 		const response = await fetch(url, { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(7_000) });
-		if (!response.ok) return reviewed;
+		if (!response.ok) return { items: reviewed, status: response.status === 429 ? 'rate_limited' : 'failed' };
 		const data = await response.json() as { results?: OpenAlexWork[] };
 		const found = papersFromWorks(data.results ?? [], p);
 		try { await redis.set(cacheKey, found, { ex: CACHE_SECONDS }); } catch { /* Cache outage does not discard results. */ }
-		return mergePapers(reviewed, found);
-	} catch { return reviewed; }
+		return { items: mergePapers(reviewed, found), status: 'complete' };
+	} catch { return { items: reviewed, status: 'failed' }; }
 }

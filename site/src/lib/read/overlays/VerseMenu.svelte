@@ -5,6 +5,7 @@
 <script lang="ts">
 	import { getApp } from '../app.svelte';
 	import { HIGHLIGHT_COLORS } from '../core';
+	import type { Category } from '../study-items';
 	import { cmdText, isMac, shortcutText } from '../keyboard';
 	import { Icon, Menu, MenuHeader, MenuItem, MenuSeparator } from '../ui';
 	import { pointRect } from '../ui/float';
@@ -13,7 +14,14 @@
 
 	const app = getApp();
 	const at = app.verseMenu!;
-	const anchor = pointRect(at.x, at.y);
+	const anchor = document.querySelector<HTMLElement>('.selection-toolbar [aria-label="More passage actions"]') ?? pointRect(at.x, at.y);
+	const studyActions: { label:string; description:string; icon:'history' | 'link' | 'search' | 'quote' | 'book'; category:Category }[] = [
+		{ label:'History', description:'The people, places, and world behind it', icon:'history', category:'history' },
+		{ label:'Related', description:'Where else Scripture takes this up', icon:'link', category:'related' },
+		{ label:'Research', description:'Academic research and scholarship', icon:'search', category:'academic' },
+		{ label:'Testimonials', description:'Personal stories connected to the passage', icon:'quote', category:'testimonials' },
+		{ label:'Sermons', description:'Sermons and teaching on YouTube', icon:'book', category:'videos' }
+	];
 
 	const refs = $derived(app.selectedRefs());
 	const marks = $derived(refs.length ? app.marks(app.settings.translation, app.chapterIndex(refs[0])) : null);
@@ -35,14 +43,21 @@
 
 <Menu
 	{anchor}
-	gap={0}
-	flip={false}
+	side="top"
+	align="end"
+	gap={8}
+	quiet
 	width={WIDTH}
 	onclose={close}
 	label="Verse"
 	class="selection-overflow"
 	highlight={app.demo.menu === 'first' ? 0 : undefined}
 >
+	<MenuItem icon="text-size" label="Simplify" description="The same idea in plain words" onclick={() => { close(); app.selectionAction = 'simplify'; }} />
+	{#each studyActions as action}
+		<MenuItem icon={action.icon} label={action.label} description={action.description} onclick={() => run({ type:'goDeeper', category:action.category })} />
+	{/each}
+	<MenuSeparator />
 	<MenuHeader label="Highlight" />
 	<div class="swatches">
 		{#each HIGHLIGHT_COLORS as c, k (c)}
@@ -84,7 +99,7 @@
 		onclick={() => run({ type: 'toggleBookmark' })}
 	/>
 	<MenuSeparator />
-	<button type="button" class="feature-item" role="menuitem" tabindex="-1" onclick={() => run({ type: 'goDeeper' })}><Icon name="search" size={18} /><span><strong>Go deeper</strong><small>History, scholarship, stories &amp; video</small></span></button>
+	<MenuItem icon="search" label="Go deeper" description="All passage study sources together" onclick={() => run({ type:'goDeeper' })} />
 	<MenuSeparator />
 	<MenuItem icon="copy" label="Copy" shortcut={cmdText('C')} onclick={() => run({ type: 'copyText' })} />
 	<MenuItem icon="quote" label="Copy with Reference" shortcut={keys('copy')} onclick={() => run({ type: 'copy' })} />
@@ -97,12 +112,8 @@
 </Menu>
 
 <style>
-	:global(.selection-overflow) { --surface:#eee8dc; --ink:#263442; --ink-2:#52616a; --ink-3:#64716e; --separator:#c8c3b8; --fill-strong:#dce5dc; background:#eee8dc !important; border:1px solid #d6d1c4; }
-	.feature-item { display:flex; align-items:center; gap:12px; width:100%; padding:9px var(--menu-item-padding); border-radius:9px; color:var(--ink); text-align:left; }
-	.feature-item:hover,.feature-item:focus-visible { background:#dce5dc; outline:none; }
-	.feature-item span { display:grid; gap:2px; }
-	.feature-item strong { font-size:13px; font-weight:600; }
-	.feature-item small { font-size:11px; color:#596a70; }
+	:global(.popover.menu.selection-overflow) { --surface:#eee8dc; --ink:#292c29; --ink-2:#64665d; --ink-3:#64665d; --separator:#d6d1c4; --fill:#ded8cb; --fill-strong:#d3cdbf; background:#eee8dc; border:1px solid #d6d1c4; border-radius:16px; max-height:min(540px,60dvh,var(--visual-height,100dvh)); z-index:61; }
+	:global(.selection-overflow .item:focus .description), :global(.selection-overflow .item:focus .shortcut) { color:var(--ink); }
 	/* 20 pt swatches 10 apart, 6 above and 8 below, from the text column. */
 	.swatches {
 		display: flex;
@@ -149,5 +160,9 @@
 
 	.clear {
 		color: var(--ink-3);
+	}
+	@media (pointer:coarse) {
+		.swatches { height:auto; flex-wrap:wrap; gap:4px; }
+		.swatch, .clear { width:44px; height:44px; }
 	}
 </style>

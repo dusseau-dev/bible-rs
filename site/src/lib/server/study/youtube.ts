@@ -1,9 +1,8 @@
-import { Redis } from '@upstash/redis';
+import { redis } from '#lib/redis.js';
 import { BOOKS } from '#lib/read/books.js';
-import type { StudyPassage, StudyVideo } from '#lib/read/study.js';
+import type { DiscoveryResult, StudyPassage, StudyVideo } from '#lib/read/study.js';
 import { allowVideoSearch } from './limits.js';
 
-const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN ? Redis.fromEnv() : null;
 const CACHE_SECONDS = 7 * 24 * 60 * 60;
 
 export interface YouTubeItem {
@@ -85,18 +84,21 @@ async function details(ids: string[], key: string): Promise<YouTubeItem[]> {
 }
 
 /** Two capped searches cover short clips and full videos; cached per passage for seven days. */
-export async function discoverPassageVideos(p: StudyPassage, key: string | undefined, client: string): Promise<StudyVideo[]> {
-	if (!key || !redis) return [];
+export async function discoverPassageVideos(p: StudyPassage, key: string | undefined, client: string): Promise<DiscoveryResult<StudyVideo>> {
+	if (!key || !redis) return { items: [], status: 'disabled' };
 	const cacheKey = `bible:study:youtube:${p.book}:${p.chapter}:${p.firstVerse}:${p.lastVerse}`;
-	try { const cached = await redis.get<StudyVideo[]>(cacheKey); if (cached) return cached; }
+	try { const cached = await redis.get<StudyVideo[]>(cacheKey); if (cached) return { items: cached, status: 'complete' }; }
 	catch { /* Search can still proceed. */ }
-	if (!await allowVideoSearch(client)) return [];
+	const permission = await allowVideoSearch(client);
+	if (permission !== 'allowed') return { items: [], status: permission };
 	try {
 		const searches = await Promise.allSettled([searchIds(p, key, 'any'), searchIds(p, key, 'short')]);
+		if (searches.every(r => r.status === 'rejected')) return { items: [], status: 'failed' };
+		const partial = searches.some(r => r.status === 'rejected');
 		const ids = [...new Set(searches.flatMap((result) => result.status === 'fulfilled' ? result.value : []))];
 		const found = videosFromYoutube(await details(ids, key), p);
 		const selected = [...found.filter((video) => video.format === 'short').slice(0, 4), ...found.filter((video) => video.format === 'full').slice(0, 6)];
-		try { await redis.set(cacheKey, selected, { ex: CACHE_SECONDS }); } catch { /* Search results still work. */ }
-		return selected;
-	} catch { return []; }
+		if (!partial) try { await redis.set(cacheKey, selected, { ex: CACHE_SECONDS }); } catch { /* Search results still work. */ }
+		return { items: selected, status: partial ? 'partial' : 'complete' };
+	} catch { return { items: [], status: 'failed' }; }
 }

@@ -116,7 +116,7 @@ export type Action =
 	| { type: 'copy' }
 	| { type: 'openVerseMenu'; x: number; y: number }
 	| { type: 'shareImage' }
-	| { type: 'goDeeper' }
+	| { type: 'goDeeper'; category?: import('./study-items').Category | 'all' }
 	| { type: 'compare' }
 	| { type: 'clearSelection' }
 	| { type: 'selectNext' }
@@ -239,7 +239,7 @@ export class ReadApp {
 	shortcuts = $state(false);
 	verseMenu = $state.raw<{ x: number; y: number } | null>(null);
 	selectionMore = $state(false);
-	selectionAction = $state<'ask' | 'explain' | 'simplify' | null>(null);
+	selectionAction = $state<'ask' | 'explain' | 'simplify' | 'define' | null>(null);
 	/** The verse whose note popover is open. */
 	note = $state.raw<VerseRef | null>(null);
 	/** Compare as a popover on the selected verse, or as the inspector beside parallel columns. */
@@ -247,6 +247,7 @@ export class ReadApp {
 	panel = $state.raw<VerseRef | null>(null);
 	share = $state.raw<VerseRef[] | null>(null);
 	studyPassage = $state.raw<StudyPassage | null>(null);
+	studyCategory = $state<import('./study-items').Category | 'all'>('all');
 	importSheet = $state(false);
 	textPopover = $state(false);
 	focus = $state(false);
@@ -1211,6 +1212,7 @@ export class ReadApp {
 				break;
 			}
 			case 'goDeeper': {
+				this.studyCategory = a.category ?? 'all';
 				if (this.selection && (this.selection[0].book !== this.selection[1].book || this.selection[0].chapter !== this.selection[1].chapter)) {
 					this.toastNow('Choose verses within one chapter to go deeper');
 					break;

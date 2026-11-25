@@ -11,7 +11,7 @@ import type { EntryGenerator, PageLoad } from './$types';
  * is universal, not a server load, only so the build writes no __data.json beside each page (with
  * no client-side rendering nothing would fetch it).
  */
-export const prerender = true;
+export const prerender = false;
 export const csr = false;
 
 export const entries: EntryGenerator = async () =>

@@ -84,9 +84,11 @@
 		transition: background-color var(--motion-fast);
 	}
 
-	.segment:hover:not(.on) {
+	@media (hover:hover) and (pointer:fine) { .segment:hover:not(.on) {
 		background: var(--fill);
-	}
+	} }
+	.segment:active { background:var(--fill-strong); }
+	@media (pointer:coarse) { .track { height:auto; min-height:48px; max-width:100%; overflow-x:auto; } .segment { min-height:44px; min-width:44px; flex-shrink:0; } }
 
 	.segment.on {
 		background: var(--raised);

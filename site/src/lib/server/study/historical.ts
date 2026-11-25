@@ -1,5 +1,7 @@
 import type { StudyPassage, StudySource } from '#lib/read/study.js';
 
+export { HISTORY_TOPICS, historyTopicsIn } from '#lib/read/history-topics.js';
+
 interface RecordLink {
 	id: string;
 	title: string;

@@ -144,24 +144,6 @@
 		window.addEventListener('storage', onStorage);
 		const backups = setInterval(() => autoBackup(), 3600_000);
 		setTimeout(autoBackup, 10_000);
-		if (!dev && 'serviceWorker' in navigator) {
-			const sw = navigator.serviceWorker;
-			// On a first visit the translations load before the worker takes over, so it hasn't kept them.
-			if (!sw.controller) {
-				sw.addEventListener(
-					'controllerchange',
-					() => {
-						const ids = new Set([...app.loaded, ...app.columns()]);
-						const cache = [...ids]
-							.filter((id) => !app.info(id)?.imported && !app.isLive(id))
-							.map((id) => `/translations/${id}.bbl`);
-						sw.controller?.postMessage({ cache });
-					},
-					{ once: true }
-				);
-			}
-			void sw.register('/service-worker.js', { scope: '/read' }).catch(() => {});
-		}
 		return () => {
 			dark.removeEventListener('change', onDark);
 			narrow.removeEventListener('change', onNarrow);
@@ -304,7 +286,7 @@
 	ondrop={drop}
 />
 
-<div class="window" class:booted class:focus={app.focus}>
+<div class="window" class:booted class:focus={app.focus} aria-busy={!app.core && !app.coreError}>
 	{#if app.onboarding}
 		<Onboarding />
 		<Toasts />
@@ -348,7 +330,7 @@
 		{#if app.note}{#key app.note}<NotePopover />{/key}{/if}
 		{#if app.compare}<ComparePopover />{/if}
 		{#if app.selectionMore && app.verseMenu}<VerseMenu />{/if}
-		{#if (app.verseMenu || (app.touch && app.selection && app.page === 'reader')) && !app.selectionMore && !app.note && !app.studyPassage && !app.selectionAction}<SelectionToolbar />{/if}
+		{#if (app.verseMenu || (app.touch && app.selection && app.page === 'reader')) && !app.note && !app.compare && !app.share && !app.studyPassage && !app.selectionAction}<SelectionToolbar />{/if}
 		{#if app.selectionAction && app.selection && app.page === 'reader'}<QuickStudy />{/if}
 		{#if app.palette}<Palette />{/if}
 		{#if app.settingsTab}<SettingsSheet />{/if}
@@ -366,7 +348,10 @@
 <style>
 	.window {
 		position: fixed;
-		inset: 0;
+		top: env(safe-area-inset-top, 0px);
+		left: env(safe-area-inset-left, 0px);
+		right: env(safe-area-inset-right, 0px);
+		height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
 		overflow: hidden;
 		background: var(--paper);
 		color: var(--ink);

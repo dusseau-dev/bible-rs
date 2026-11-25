@@ -1,4 +1,4 @@
-import type { StudyPassage, StudyTestimonial } from '#lib/read/study.js';
+import type { DiscoveryResult, StudyPassage, StudyTestimonial } from '#lib/read/study.js';
 import { BOOKS } from '#lib/read/books.js';
 
 const HOST = 'forums.crosswalk.com';
@@ -67,11 +67,11 @@ export function mergeTestimonials(reviewed: StudyTestimonial[], discovered: Stud
 	}).sort((a, b) => Number(a.scope !== 'direct') - Number(b.scope !== 'direct')).slice(0, 6);
 }
 
-export async function discoverTestimonials(p: StudyPassage, key: string): Promise<StudyTestimonial[]> {
+export async function discoverTestimonials(p: StudyPassage, key: string): Promise<DiscoveryResult<StudyTestimonial>> {
 	const label = `${BOOKS[p.book].name} ${p.chapter}:${p.firstVerse}`;
 	const themes = reviewedThemes(p);
 	const queries = [`"${label}" "my testimony" site:${HOST}`, ...themes.slice(0, 2).map((theme) => `"my testimony" "${theme}" site:${HOST}`)];
-	const results = await Promise.all(queries.map(async (query) => {
+	const results = await Promise.allSettled(queries.map(async (query) => {
 		const response = await fetch('https://api.exa.ai/search', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json', 'x-api-key': key },
@@ -81,5 +81,7 @@ export async function discoverTestimonials(p: StudyPassage, key: string): Promis
 		if (!response.ok) throw new Error(`Exa ${response.status}`);
 		return (await response.json() as { results?: ForumHit[] }).results ?? [];
 	}));
-	return testimonialsFromHits(results.flat(), p);
+	const hits = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+	const failures = results.filter(r => r.status === 'rejected').length;
+	return { items: testimonialsFromHits(hits, p), status: failures === results.length ? 'failed' : failures ? 'partial' : 'complete' };
 }

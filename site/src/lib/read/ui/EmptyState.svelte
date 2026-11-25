@@ -105,6 +105,8 @@
 
 	.buttons {
 		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
 		gap: 8px;
 		margin-top: 16px;
 	}
@@ -121,7 +123,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 4px;
-		height: 20px;
+		min-height: 20px;
 	}
 
 	.what {

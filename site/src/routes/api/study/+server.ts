@@ -1,10 +1,11 @@
 import { json } from '@sveltejs/kit';
+import { readBody } from '#lib/server/body.js';
 import { CHEAPERINFERENCE_API_KEY, OPENAI_API_KEY } from '$app/env/private';
 import type { RequestHandler } from './$types';
-import type { StudyRequest, StudyResult } from '#lib/read/study.js';
+import type { DiscoveryResult, StudyRequest, StudyResult, StudySource, StudyTestimonial } from '#lib/read/study.js';
 import { generateStudy } from '#lib/server/study/answer.js';
 import { localEvidence, passageFrom, passageLabel, passageVideos, verifiedPassageVideos } from '#lib/server/study/evidence.js';
-import { allowDiscovery, allowStudy, allowVideoRefresh } from '#lib/server/study/limits.js';
+import { allowAi, allowDiscovery, allowStudy, allowVideoRefresh } from '#lib/server/study/limits.js';
 import { discover } from '#lib/server/study/research.js';
 import { buildGuide } from '#lib/server/study/guide.js';
 import { discoverTestimonials, mergeTestimonials, reviewedTestimonials } from '#lib/server/study/community.js';
@@ -20,8 +21,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	const origin = request.headers.get('origin');
 	if (origin && origin !== url.origin) return fail(403, 'Cross-site study requests are not allowed');
 	if (!request.headers.get('content-type')?.startsWith('application/json')) return fail(415, 'Expected JSON');
-	const body = await request.text();
-	if (body.length > 8_000) return fail(413, 'The request is too large');
+	const body = await readBody(request, 8_000);
+	if (body === null) return fail(413, 'The request is too large');
 	let input: Partial<StudyRequest>;
 	try {
 		input = JSON.parse(body) as Partial<StudyRequest>;
@@ -38,7 +39,9 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	if (input.mode === 'ask' && !input.question?.trim()) return fail(400, 'Enter a question');
 	let client = 'unknown';
 	try { client = getClientAddress(); } catch { /* local preview */ }
-	if (!(await allowStudy(client))) return fail(429, 'Too many study requests. Try again later.');
+	const studyPermission = await allowStudy(client);
+	if (studyPermission === 'rate_limited') return fail(429, 'Too many study requests. Try again later.');
+	if (studyPermission !== 'allowed') return fail(503, 'Study is temporarily unavailable. Try again later.');
 
 	let local: Awaited<ReturnType<typeof localEvidence>>;
 	try {
@@ -50,8 +53,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	const reviewedVideos = passageVideos(passage);
 	const refreshVideo = youtubeKey && reviewedVideos.length > 0 && await allowVideoRefresh();
 	const exaKey = process.env.EXA_API_KEY?.trim();
-	const searchExa = Boolean(exaKey && await allowDiscovery(client));
+	const exaPermission = exaKey ? await allowDiscovery(client) : 'disabled';
+	const searchExa = exaPermission === 'allowed';
+	const discovery: NonNullable<StudyResult['discovery']> = { sources: 'failed', testimonials: 'failed', papers: 'failed', videos: 'failed' };
 	const result: StudyResult = {
+		discovery,
 		reference: passageLabel(passage),
 		passageText: local.passageText,
 		contextText: local.contextText,
@@ -66,18 +72,18 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	};
 	const [verified, research, community, papers, videos] = await Promise.allSettled([
 		verifiedPassageVideos(passage, refreshVideo ? youtubeKey : undefined),
-		searchExa ? discover(passage, exaKey!) : Promise.resolve([]),
-		searchExa ? discoverTestimonials(passage, exaKey!) : Promise.resolve([]),
+		searchExa ? discover(passage, exaKey!).then(items => ({ items, status: 'complete' as const })) : Promise.resolve<DiscoveryResult<StudySource>>({ items: [], status: exaPermission as Exclude<typeof exaPermission, 'allowed'> }),
+		searchExa ? discoverTestimonials(passage, exaKey!) : Promise.resolve<DiscoveryResult<StudyTestimonial>>({ items: [], status: exaPermission as Exclude<typeof exaPermission, 'allowed'> }),
 		passagePapers(passage, process.env.OPENALEX_API_KEY?.trim(), client),
 		discoverPassageVideos(passage, youtubeKey, client)
 	]);
 	if (verified.status === 'fulfilled') result.videos = verified.value;
-	if (research.status === 'fulfilled') result.sources.push(...research.value);
-	if (community.status === 'fulfilled') result.testimonials = mergeTestimonials(result.testimonials, community.value);
-	if (papers.status === 'fulfilled') result.papers = papers.value;
-	if (videos.status === 'fulfilled') result.videos = mergeVideos(result.videos, videos.value);
+	if (research.status === 'fulfilled') { result.sources.push(...research.value.items); discovery.sources = research.value.status; }
+	if (community.status === 'fulfilled') { result.testimonials = mergeTestimonials(result.testimonials, community.value.items); discovery.testimonials = community.value.status; }
+	if (papers.status === 'fulfilled') { result.papers = papers.value.items; discovery.papers = papers.value.status; }
+	if (videos.status === 'fulfilled') { result.videos = mergeVideos(result.videos, videos.value.items); discovery.videos = videos.value.status; }
 	const aiKey = CHEAPERINFERENCE_API_KEY?.trim() || OPENAI_API_KEY?.trim() || input.aiKey?.trim() || input.openaiKey?.trim();
-	if (aiKey) {
+	if (aiKey && await allowAi()) {
 		try {
 			const generated = await generateStudy({
 				passage,
@@ -91,8 +97,9 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 			result.claims = generated.claims;
 			result.answer = generated.answer;
 			result.guide = generated.guide;
-		} catch (error) {
-			result.message = error instanceof Error ? error.message : 'The AI summary is unavailable right now';
+			if (generated.message) result.message = generated.message;
+		} catch {
+			result.message = 'The AI summary is unavailable right now. Sources and language data are still available.';
 		}
 	} else {
 		result.message = input.mode === 'ask'

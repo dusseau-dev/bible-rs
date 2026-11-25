@@ -1,7 +1,7 @@
 import { BOOKS, bookSlug } from '#lib/read/books.js';
 import { chapterVerses, core } from '#lib/read/core.js';
 import type { StudyPassage, StudySource, StudyTerm, StudyVideo, Tradition } from '#lib/read/study.js';
-import { historicalRecordSources } from './historical.js';
+import { historicalRecordSources, historyTopicsIn } from './historical.js';
 import { durationSeconds } from './youtube.js';
 
 const STEP_REV = '5de0a47f35f0fc13dfe1430d104e5db8a4285f9c';
@@ -43,11 +43,36 @@ export const passageLabel = (p: StudyPassage) =>
 
 const point = ([chapter, verse]: [number, number]) => chapter * 1000 + verse;
 
-async function chapterData(book: number, chapter: number): Promise<ChapterData> {
+async function bookData(book: number): Promise<Record<string, ChapterData>> {
 	const loader = files[`./data/${String(book).padStart(2, '0')}.json`];
-	if (!loader) return { notes: [], terms: {} };
-	const data = (await loader()) as Record<string, ChapterData>;
-	return data[String(chapter)] ?? { notes: [], terms: {} };
+	return loader ? ((await loader()) as Record<string, ChapterData>) : {};
+}
+
+/**
+ * Study notes from earlier in the book that give historical background, chosen so that
+ * together they touch as many history topics as possible. Only notes ending before `start`.
+ */
+export function bookContextNotes(data: Record<string, Pick<ChapterData, 'notes'>>, start: number, limit = 6): Note[] {
+	// Notes spanning chapters are stored under each chapter, so dedupe by id.
+	const unique = new Map(Object.values(data).flatMap((chapter) => chapter.notes).map((note) => [note.id, note]));
+	const candidates = [...unique.values()]
+		.filter((note) => point(note.to) < start)
+		.map((note) => ({ note, topics: historyTopicsIn(note.text) }))
+		.filter((item) => item.topics.length);
+	const covered = new Set<number>();
+	const gain = (item: (typeof candidates)[number]) => item.topics.filter((t) => !covered.has(t)).length;
+	const picked: Note[] = [];
+	while (picked.length < limit && candidates.length) {
+		let best = 0;
+		for (let i = 1; i < candidates.length; i++) {
+			const diff = gain(candidates[i]) - gain(candidates[best]);
+			if (diff > 0 || (diff === 0 && point(candidates[i].note.to) > point(candidates[best].note.to))) best = i;
+		}
+		const [chosen] = candidates.splice(best, 1);
+		chosen.topics.forEach((t) => covered.add(t));
+		picked.push(chosen.note);
+	}
+	return picked;
 }
 
 export async function localEvidence(p: StudyPassage): Promise<{
@@ -94,7 +119,8 @@ export async function localEvidence(p: StudyPassage): Promise<{
 		excerpt: contextText.slice(0, 5000)
 	};
 
-	const data = await chapterData(p.book, p.chapter);
+	const book = await bookData(p.book);
+	const data = book[String(p.chapter)] ?? { notes: [], terms: {} };
 	const start = p.chapter * 1000 + p.firstVerse;
 	const end = p.chapter * 1000 + p.lastVerse;
 	const notes = data.notes
@@ -121,20 +147,22 @@ export async function localEvidence(p: StudyPassage): Promise<{
 			location: 'Romans 5:12, 18–19', license: 'Public domain', excerpt
 		});
 	}
-	for (const { n, direct } of notes) {
-		sources.push({
-			id: `aosn:${n.id}`,
-			title: n.title,
-			author: 'Aquifer Open Study Notes · Mission Mutual',
-			kind: 'study_note',
-			tradition: null,
-			scope: direct ? 'direct' : 'context',
-			url: `https://github.com/BibleAquifer/AquiferOpenStudyNotes/blob/${AQUIFER_REV}/eng/json/${String(p.book + 1).padStart(2, '0')}.content.json`,
-			location: n.title,
-			license: 'CC BY-SA 4.0',
-			excerpt: n.text.slice(0, 1400)
-		});
-	}
+	const studyNote = (n: Note, scope: StudySource['scope'], length: number): StudySource => ({
+		id: `aosn:${n.id}`,
+		title: n.title,
+		author: 'Aquifer Open Study Notes · Mission Mutual',
+		kind: 'study_note',
+		tradition: null,
+		scope,
+		url: `https://github.com/BibleAquifer/AquiferOpenStudyNotes/blob/${AQUIFER_REV}/eng/json/${String(p.book + 1).padStart(2, '0')}.content.json`,
+		location: n.title,
+		license: 'CC BY-SA 4.0',
+		excerpt: n.text.slice(0, length)
+	});
+	for (const { n, direct } of notes) sources.push(studyNote(n, direct ? 'direct' : 'context', 1400));
+	// Background from earlier in the book, up to where the reader is, for the history notes.
+	const shown = new Set(notes.map(({ n }) => n.id));
+	for (const n of bookContextNotes(book, start)) if (!shown.has(n.id)) sources.push(studyNote(n, 'related', 700));
 
 	const terms: StudyTerm[] = [];
 	for (const verse of selected) {

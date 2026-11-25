@@ -452,6 +452,13 @@
 		background: var(--accent-soft);
 	}
 
+	/* Touch devices keep saved-note controls in the text flow instead of beyond
+	   the narrow reading margin, where they can be clipped by the scroll container. */
+	@media (pointer:coarse) {
+		.markers { position:static; height:44px; margin:0 4px 0 0; vertical-align:middle; }
+		.marker { width:44px; height:44px; }
+	}
+
 	/* An object modelled in 3D: an 18 pt cube after the verse, in the accent colour. */
 	.glyph {
 		display: inline-grid;

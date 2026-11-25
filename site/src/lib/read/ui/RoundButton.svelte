@@ -43,9 +43,8 @@
 		transition: background-color var(--motion-fast);
 	}
 
-	.round:hover:not(:disabled) {
-		background: var(--fill);
-	}
+	@media (hover: hover) and (pointer: fine) { .round:hover:not(:disabled) { background: var(--fill); } }
+	@media (pointer: coarse) { .round { min-width:44px; min-height:44px; } }
 
 	.round:active:not(:disabled) {
 		background: var(--fill-strong);

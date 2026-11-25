@@ -2,9 +2,14 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
 		<meta name="text-scale" content="scale" />
 		<meta name="theme-color" content="#0a0a0b" />
+		<link rel="manifest" href="/manifest.webmanifest" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-title" content="Bible" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 		<script>
 			try {
 				var d = document.documentElement;
@@ -29,6 +34,8 @@
 						d.dataset.pending = '';
 						setTimeout(function () { delete d.dataset.pending; }, 5000);
 					}
+				} else if (location.pathname.startsWith('/sign-in')) {
+					meta.content = '#fffdf7';
 				} else if (localStorage.getItem('theme') === 'light') {
 					d.dataset.theme = 'light';
 					meta.content = '#f5f5f7';

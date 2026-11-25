@@ -154,4 +154,5 @@
 		text-align: center;
 		font-variant-numeric: tabular-nums;
 	}
+	@media (hover:none) { .reveal { opacity:.9; pointer-events:auto; } .hint { display:none; } }
 </style>

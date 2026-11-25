@@ -120,4 +120,5 @@
 	.attached .content {
 		border-radius: 0;
 	}
+	@media (pointer:coarse) { .header { min-height:48px; } }
 </style>

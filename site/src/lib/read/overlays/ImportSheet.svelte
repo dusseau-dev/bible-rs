@@ -129,11 +129,11 @@
 				<div class="names">
 					<label class="named abbrev">
 						<span class="label">Abbreviation</span>
-						<TextField bind:value={im.abbrev} placeholder="ABBR" />
+						<TextField bind:value={im.abbrev} placeholder="ABBR" disabled={!!im.picked && !peek && !im.peekError} />
 					</label>
 					<label class="named">
 						<span class="label">Name</span>
-						<TextField bind:value={im.name} placeholder="Translation name" />
+						<TextField bind:value={im.name} placeholder="Translation name" disabled={!!im.picked && !peek && !im.peekError} />
 					</label>
 				</div>
 
@@ -171,7 +171,7 @@
 					<span class="status-text">{STATUS[Math.min(step, 3)]}</span>
 					{#if step >= 2}<span class="count">{books} of 66{current ? ` · ${current}` : ''}</span>{/if}
 				</div>
-				<div class="track"><div class="fill" style:width="{step < 2 ? 0 : Math.floor((books / 66) * 512)}px"></div></div>
+				<div class="track"><div class="fill" style:width="{step < 2 ? 0 : (books / 66) * 100}%"></div></div>
 				<p class="left">{left}</p>
 
 				<ol class="steps">
@@ -691,5 +691,12 @@
 
 	.foot :global(.report) {
 		margin-right: auto;
+	}
+	@media (max-width:700px) {
+		.body { padding:16px; }
+		.foot { padding:12px 16px; height:auto; min-height:64px; flex-wrap:wrap; }
+		.names { flex-wrap:wrap; }
+		.unlock { width:100%; }
+		.issue-head { height:auto; flex-wrap:wrap; }
 	}
 </style>

@@ -239,7 +239,7 @@
 
 	.name {
 		display: flex;
-		width: 280px;
+		width:min(100%,280px);
 	}
 
 	.name :global(> *) {

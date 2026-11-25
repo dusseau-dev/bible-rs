@@ -11,7 +11,7 @@
 	number lights that chapter.
 -->
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { getApp } from '../app.svelte';
 	import { filterBooks, parseReferenceIn, type Book } from '../core';
 	import { Icon, Popover } from '../ui';
@@ -26,7 +26,14 @@
 
 	const app = getApp();
 	const COLUMNS = 3;
-	const CHAPTER_COLUMNS = 10;
+	let narrow = $state(false);
+	const CHAPTER_COLUMNS = $derived(narrow ? 5 : 10);
+	onMount(() => {
+		const media = matchMedia('(max-width: 600px)');
+		const update = () => { narrow = media.matches; };
+		update(); media.addEventListener('change', update);
+		return () => media.removeEventListener('change', update);
+	});
 	/** Longer names show the book's abbreviation. */
 	const MAX_NAME = 12;
 
@@ -45,11 +52,13 @@
 
 	/** A book's column across both testaments (0–5) and its row. */
 	function spot(i: number): [number, number] {
+		if (narrow) return [i % COLUMNS, Math.floor(i / COLUMNS)];
 		const [group, k] = i < firstNt ? [0, i] : [1, i - firstNt];
 		return [group * COLUMNS + (k % COLUMNS), Math.floor(k / COLUMNS)];
 	}
 
 	function at(col: number, row: number): number | null {
+		if (narrow) { const i = row * COLUMNS + col; return col >= 0 && col < COLUMNS && row >= 0 && i < books.length ? i : null; }
 		if (col < 0 || row < 0 || col >= 2 * COLUMNS) return null;
 		const [start, end] = col < COLUMNS ? [0, firstNt] : [firstNt, books.length];
 		const i = start + row * COLUMNS + (col % COLUMNS);
@@ -246,8 +255,8 @@
 	<div class="body" onpointerover={pointerover} onpointerleave={pointerleave}>
 		{#if !book}
 			<div class="books">
-				<p class="header" style:grid-column="1 / span 3">Old Testament</p>
-				<p class="header" style:grid-column="5 / span 3">New Testament</p>
+				<p class="header" style:grid-column="1 / span 3" style:order="0">Old Testament</p>
+				<p class="header" style:grid-column="5 / span 3" style:order={firstNt + 1}>New Testament</p>
 				{#if query}
 					<p class="typed" style:grid-column="5 / span 3" aria-live="polite">
 						{matches.length ? query : `${query}: no book`}
@@ -262,6 +271,7 @@
 						class:muted={query !== '' && !matches.includes(b.index)}
 						role="menuitem"
 						data-cell={i}
+						style:order={i + 1}
 						style:grid-column={col + 1 + (col >= COLUMNS ? 1 : 0)}
 						style:grid-row={row + 2}
 						use:follow={(e) => chooseBook(b, e.detail === 0)}
@@ -411,5 +421,12 @@
 	.number {
 		justify-content: center;
 		padding: 0;
+	}
+	@media (max-width:600px) {
+		.books { width:calc(100vw - 32px); grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:none; grid-auto-rows:44px; }
+		.books .header, .books .typed { grid-column:1 / -1 !important; grid-row:auto !important; }
+		.books .cell { grid-column:auto !important; grid-row:auto !important; }
+		.cell { min-height:44px; }
+		.grid { width:calc(100vw - 32px); grid-template-columns:repeat(5,minmax(44px,1fr)); }
 	}
 </style>

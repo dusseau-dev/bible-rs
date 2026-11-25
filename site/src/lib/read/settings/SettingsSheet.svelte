@@ -104,6 +104,8 @@
 		justify-content: center;
 		gap: 4px;
 		outline: none;
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
 	}
 
 	.tab {
@@ -112,6 +114,7 @@
 		align-items: center;
 		gap: 2px;
 		width: 76px;
+		flex-shrink: 0;
 		height: 52px;
 		padding-top: 7px;
 		border-radius: 10px;
@@ -119,9 +122,8 @@
 		font: 500 11px/16px var(--font-ui);
 	}
 
-	.tab:hover:not(.on) {
-		background: var(--fill);
-	}
+	@media (hover: hover) and (pointer: fine) { .tab:hover:not(.on) { background: var(--fill); } }
+	.tab:active { background: var(--fill-strong); }
 
 	.tab.on {
 		background: var(--accent-soft);
@@ -210,5 +212,10 @@
 		padding-left: 4px;
 		color: var(--ink-3);
 		font: var(--type-small);
+	}
+	@media (max-width:600px) {
+		.tabs { justify-content:flex-start; padding:0 12px; }
+		.body { padding:20px 12px; }
+		.body :global(.row) { flex-wrap:wrap; height:auto !important; min-height:52px; padding:10px 12px; }
 	}
 </style>

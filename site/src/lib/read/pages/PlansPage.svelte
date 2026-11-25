@@ -212,7 +212,7 @@
 						<p class="leave-note">{LEAVE_BODY_SHORT}</p>
 					{/if}
 					<div class="hero-progress">
-						<span class="track"><span class="fill" style:width="{(320 * doneDays) / len}px"></span></span>
+						<span class="track"><span class="fill" style:width="{(100 * doneDays) / len}%"></span></span>
 						<span>{doneDays} of {len} days</span>
 					</div>
 					<div class="hero-actions">
@@ -384,6 +384,7 @@
 <style>
 	.tabs {
 		display: flex;
+		flex-wrap:wrap;
 		gap: 4px;
 	}
 
@@ -593,7 +594,7 @@
 
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, 300px);
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 		gap: 16px;
 	}
 
@@ -686,5 +687,15 @@
 		justify-content: flex-end;
 		gap: 8px;
 		margin-top: 28px;
+	}
+	@media (max-width:1000px) {
+		.hero { flex-direction:column; align-items:stretch; padding:20px; gap:20px; }
+		.hero-main { width:100%; }
+		.hero-progress { height:auto; flex-wrap:wrap; }
+		.track { width:min(100%,320px); }
+		.calendar { width:100%; }
+		.dots { grid-template-columns:repeat(15,minmax(0,14px)); gap:4px; }
+		.dot { width:100%; }
+		.hero-actions { flex-wrap:wrap; height:auto; }
 	}
 </style>

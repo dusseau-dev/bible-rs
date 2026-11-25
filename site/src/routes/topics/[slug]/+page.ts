@@ -12,7 +12,7 @@ import type { EntryGenerator, PageLoad } from './$types';
  * plain page, no app (see the verse page's +page.ts). The verses' text comes from the core here,
  * as the page is prerendered.
  */
-export const prerender = true;
+export const prerender = false;
 export const csr = false;
 
 export const entries: EntryGenerator = async () => (await topics()).map(({ slug }) => ({ slug }));

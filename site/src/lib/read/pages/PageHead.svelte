@@ -49,4 +49,9 @@
 		align-items: center;
 		gap: 8px;
 	}
+	@media (max-width: 700px) {
+		.head { height:auto; flex-direction:column; align-items:stretch; gap:16px; }
+		.subtitle { white-space:normal; }
+		.actions { flex-wrap:wrap; min-width:0; }
+	}
 </style>
