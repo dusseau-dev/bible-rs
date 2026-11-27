@@ -13,6 +13,6 @@ export default defineConfig({
 		// Chromium's service-worker process needs this too for the disposable localhost certificate.
 		{ name: 'desktop', use: { launchOptions: { args: ['--ignore-certificate-errors'] }, viewport: { width: 1440, height: 900 } } },
 		{ name: 'phone', use: { launchOptions: { args: ['--ignore-certificate-errors'] }, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 } },
-		{ name: 'iphone-webkit', testMatch: ['app-pwa.spec.ts', 'mobile-interactions.spec.ts'], use: { browserName: 'webkit', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 } }
+		{ name: 'iphone-webkit', testMatch: ['app-pwa.spec.ts', 'mobile-interactions.spec.ts', 'passage-discoveries.spec.ts'], use: { browserName: 'webkit', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 } }
 	]
 });

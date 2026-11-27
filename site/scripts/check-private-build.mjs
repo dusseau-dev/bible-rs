@@ -7,7 +7,7 @@ const files = readdirSync('.vercel/output/static', { recursive: true });
 const protectedAsset = /^(?:index\.html$|(?:read|api|auth|translations|topics|ark-of-the-covenant)(?:\.html|\/.*\.(?:html|json|bbl))$)/;
 assert.deepEqual(files.filter(file => protectedAsset.test(file)), [], 'Protected pages/data must not be exported as public static files');
 const { routes } = JSON.parse(readFileSync('.vercel/output/config.json', 'utf8'));
-for (const dest of ['/read', '/api/study', '/api/nlt', '/auth/login', '/auth/logout', '/translations/[file]']) {
+for (const dest of ['/read', '/api/study', '/api/study/lesson', '/api/nlt', '/auth/login', '/auth/logout', '/translations/[file]']) {
 	assert(routes.some(route => route.dest === dest), `${dest} must reach a server function`);
 }
 console.log('Private build: protected pages/data reach authenticated server routes.');

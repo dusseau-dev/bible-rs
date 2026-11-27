@@ -1,3 +1,4 @@
+import type { DiscoveryBundle } from './discoveries';
 /** The web study panel's public request and response contract. */
 export interface StudyPassage {
 	book: number;
@@ -76,6 +77,12 @@ export interface StudyGuideStep {
 	connection?: 'explicit' | 'allusion' | 'theme';
 }
 
+export const TESTIMONIAL_PLATFORMS = {
+	x: 'X', reddit: 'Reddit', facebook: 'Facebook', linkedin: 'LinkedIn', threads: 'Threads',
+	instagram: 'Instagram', youtube: 'YouTube Shorts', crosswalk: 'Crosswalk Forums'
+} as const;
+export type TestimonialPlatform = keyof typeof TESTIMONIAL_PLATFORMS;
+
 export interface StudyTestimonial {
 	id: string;
 	title: string;
@@ -83,9 +90,14 @@ export interface StudyTestimonial {
 	url: string;
 	scope: 'direct' | 'related';
 	theme?: string;
+	/** Optional for responses cached before social platforms were searched (all Crosswalk). */
+	platform?: TestimonialPlatform;
+	/** The person's own words, at most 280 characters. */
+	excerpt?: string;
 }
 
 export interface StudyResult {
+	discoveries?: DiscoveryBundle;
 	/** Additive for older clients; completed with no results differs from not searched. */
 	discovery?: Record<DiscoveryKind, DiscoveryStatus>;
 	reference: string;

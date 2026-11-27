@@ -88,6 +88,25 @@ test('shows accurate categories, related citations and discovery states', async 
 	expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
 });
 
+test('testimonials show the person\'s own words, platform, and a link to the post', async ({ page }, info) => {
+	const story = 'Psalm 23:1 has been my life\'s testimony. As a boy I tried to fight my own battles, and I learned the Lord was my shepherd.';
+	await page.route('**/api/study', route => route.fulfill({ json: {
+		reference: 'John 3:16', passageText: 'For God so loved the world.', contextText: '', sources: [], terms: [], claims: [], guide: [], papers: [], videos: [], answer: null,
+		testimonials: [{ id: 'threads:1', title: 'Post', author: '@jane.doe', url: 'https://www.threads.com/@jane.doe/post/ABC', scope: 'direct', platform: 'threads', excerpt: story }],
+		discovery: { sources: 'complete', papers: 'complete', testimonials: 'complete', videos: 'complete' }
+	} }));
+	await page.locator('#v16 .v').first().click({ button: 'right' });
+	await page.getByRole('button', { name: 'More passage actions' }).click();
+	await page.getByRole('menuitem', { name: /Go deeper/i }).click();
+	const folio = page.getByRole('dialog', { name: 'Go deeper passage study' });
+	await folio.getByRole('button', { name: /^Testimonials 1/ }).click();
+	await expect(folio.getByText(story)).toBeVisible();
+	await expect(folio.getByText('Testimonials · Threads')).toBeVisible();
+	await expect(folio.getByText('@jane.doe', { exact: false })).toBeVisible();
+	await expect(folio.getByRole('link', { name: /Read on Threads/ })).toHaveAttribute('href', 'https://www.threads.com/@jane.doe/post/ABC');
+	if (info.project.name === 'phone') await page.screenshot({ path: '../.context/testimonials-phone.png' });
+});
+
 test('deep research leads with a hook and reasoning, without repeating its source or generic guide summary', async ({ page }) => {
 	const explanation = 'The grammatical form and the verb must be read together. A plural noun alone cannot establish how many actors the sentence describes.';
 	await page.route('**/api/study', route => route.fulfill({ json: {

@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getApp } from '../app.svelte';
-	import { categories, itemsFrom, type Category } from '../study-items';
+	import { categories, itemsFrom, studyCounts, type Category } from '../study-items';
 	import { discoveryNotices, emptyCategory } from '../discovery-status';
 	import type { StudyResult } from '../study';
 	import { Icon } from '../ui';
+	import DiscoveryList from './DiscoveryList.svelte';
 	import VideoThumbnail from './VideoThumbnail.svelte';
 
 	const app = getApp();
-	const passage = app.studyPassage!;
-	const quoteWords = app.wordSpan();
-	const selectedQuote = quoteWords ? app.core?.copySpan(quoteWords.translation, quoteWords.span, 'plain') : null;
+	const passage = $derived(app.studyPassage!);
+	const quoteWords = $derived(app.wordSpan());
+	const selectedQuote = $derived(quoteWords ? app.core?.copySpan(quoteWords.translation, quoteWords.span, 'plain') : null);
 	let folio: HTMLElement;
 	let result = $state<StudyResult | null>(null);
 	let loading = $state(false);
@@ -20,16 +21,18 @@
 	const close = () => { controller?.abort(); app.studyPassage = null; };
 
 	const items = $derived(result ? itemsFrom(result) : []);
+	let chipsHeight = $state(0);
 	const shown = $derived(filter === 'all' ? items : items.filter((item) => item.category === filter));
 	const credits = $derived([...new Set(items.flatMap(item => item.attribution?.split('; ') ?? []))]);
-	const count = (c: Category) => items.filter((item) => item.category === c).length;
+	const counts = $derived(result ? studyCounts(result) : null);
+	const count = (c: Category) => counts?.categories[c] ?? 0;
 	const labelOf = (c: Category) => categories.find((x) => x.id === c)!.label;
 
 	async function load() {
 		controller?.abort();
 		const current = new AbortController();
 		controller = current;
-		loading = true; error = '';
+		loading = true; error = ''; result = null;
 		try {
 			const response = await fetch('/api/study', {
 				method: 'POST', headers: { 'content-type': 'application/json' }, cache: 'no-store', signal: current.signal,
@@ -44,11 +47,12 @@
 		} finally { if (controller === current) loading = false; }
 	}
 
+	$effect(() => { if (passage) void load(); });
+
 	function keydown(event: KeyboardEvent) { if (event.key === 'Escape') { event.preventDefault(); close(); } }
 	onMount(() => {
 		const before = document.activeElement as HTMLElement | null;
 		folio?.focus({ preventScroll: true });
-		void load();
 		return () => { controller?.abort(); if (before?.isConnected) before.focus({ preventScroll: true }); };
 	});
 </script>
@@ -58,13 +62,13 @@
 		<div><h2>{result?.reference ?? 'Passage study'}</h2><p>A closer look at the words, the evidence, and what they change</p></div>
 		<button type="button" class="icon-button" aria-label="Close study" onclick={close}><Icon name="close" size={18} /></button>
 	</header>
-	<div class="content">
+	<div class="content" style:--sticky-top="{chipsHeight}px">
 		<div class="passage-intro">
 			<blockquote class="selection-quote">{selectedQuote ?? result?.passageText ?? 'Reading the selected passage…'}</blockquote>
 			<p class="translation">{selectedQuote ? 'Selected text · current translation' : 'World English Bible · public domain'}</p>
 		</div>
-		<div class="chips" role="group" aria-label="Show category">
-			<button type="button" class:active={filter === 'all'} aria-pressed={filter === 'all'} onclick={() => filter = 'all'}>All{#if result}<span class="count">{items.length}</span>{/if}</button>
+		<div class="chips" role="group" aria-label="Show category" bind:clientHeight={chipsHeight}>
+			<button type="button" class:active={filter === 'all'} aria-pressed={filter === 'all'} onclick={() => filter = 'all'}>All{#if result}<span class="count">{#if result.discoveries}{counts?.discoveries} discoveries · {counts?.resources} resources{:else}{items.length}{/if}</span>{/if}</button>
 			{#each categories as c}<button type="button" class:active={filter === c.id} class:none={result && !count(c.id)} aria-pressed={filter === c.id} onclick={() => filter = c.id}>{c.label}{#if result}<span class="count">{count(c.id)}</span>{/if}</button>{/each}
 		</div>
 		{#if error}<p class="alert" role="alert">{error} <button type="button" onclick={() => load()}>Retry</button></p>{/if}
@@ -72,6 +76,11 @@
 		{#if result}
 			{#each discoveryNotices(result, filter) as notice}<p class="notice" role="status">{notice}</p>{/each}
 			{#if result.message}<p class="notice">{result.message}</p>{/if}
+			{#if result.discoveries}
+				<DiscoveryList bundle={result.discoveries} {passage} sources={result.sources} {filter} onrefresh={load} />
+				<p class="research-status">Research: scholarship {result.discoveries.research.scholarship.replaceAll('_', ' ')} · questions {result.discoveries.research.questions.replaceAll('_', ' ')} · news {result.discoveries.research.news.replaceAll('_', ' ')}</p>
+			{/if}
+			{#snippet resources()}
 			{#if shown.length}
 				<ol class="items">
 					{#each shown as item}
@@ -85,7 +94,12 @@
 						</li>
 					{/each}
 				</ol>
-			{:else}<p class="loading">{emptyCategory(result, filter)}</p>{/if}
+			{:else}<p class="loading">{emptyCategory(result!, filter)}</p>{/if}
+			{/snippet}
+			{#if result.discoveries?.items.length && filter !== 'videos' && filter !== 'testimonials' && shown.length}
+				<details class="further"><summary>Further reading ({filter === 'all' ? counts?.resources : shown.length} resources)</summary>{@render resources()}</details>
+			{:else if !result.discoveries?.items.length || filter === 'videos' || filter === 'testimonials'}{@render resources()}{/if}
+
 			{#if credits.length}
 				<details class="credits">
 					<summary onkeydown={(event) => { if (event.key === ' ') event.stopPropagation(); }}>Source credits</summary>
@@ -126,6 +140,10 @@
 	.item-title { margin:7px 0 0; font:600 19px/1.35 var(--font-reading); letter-spacing:-.015em; }
 	.item-text { margin:5px 0 0; font:15px/1.55 var(--font-reading); }
 	.meta { margin:5px 0 0; color:var(--ink-2); font-size:12px; }
+	.research-status { color:var(--ink-2); font-size:11px; margin-top:16px; }
+	.further { margin-top:16px; border-top:1px solid var(--separator); }
+	.further summary { min-height:44px; padding:12px 0; cursor:pointer; color:var(--ink-2); }
+	.further summary:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 	.credits { margin-top:16px; border-top:1px solid var(--separator); color:var(--ink-2); font-size:12px; }
 	.credits summary { min-height:44px; padding:12px 0; cursor:pointer; }
 	.credits summary:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }

@@ -3,6 +3,7 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { redis } from '#lib/redis.js';
 import { RateLimiter } from '#lib/server/nlt.js';
 
+const lessonStatus = redis && new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, '1 m'), prefix: 'bible:study:lesson-status' });
 const local = new RateLimiter([{ max: 6, per: 60_000 }, { max: 60, per: 86_400_000 }]);
 const perReader = redis && new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(60, '1 d'), prefix: 'bible:study:reader' });
 const aiGlobal = redis && new Ratelimit({ redis, limiter: Ratelimit.fixedWindow(60, '1 d'), prefix: 'bible:study:ai-total' });
@@ -84,4 +85,10 @@ export async function allowPaperSearch(address: string): Promise<LimitDecision> 
 		if (reader !== 'allowed') return reader;
 		return decision(await paperGlobal.limit('all'));
 	} catch { return 'failed'; }
+}
+
+/** Status polling has its own durable limit and never spends a generation grant. */
+export async function allowLessonStatus(owner: string): Promise<LimitDecision> {
+ if (!lessonStatus) return 'disabled';
+ try { return decision(await lessonStatus.limit(identifier(owner))); } catch { return 'failed'; }
 }

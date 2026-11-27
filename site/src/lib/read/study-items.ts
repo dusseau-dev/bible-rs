@@ -1,5 +1,5 @@
 import { historyTopicLabel } from './history-topics';
-import type { EvidenceScope, StudyResult, StudyVideo } from './study';
+import { TESTIMONIAL_PLATFORMS, type EvidenceScope, type StudyResult, type StudyVideo } from './study';
 
 export const categories = [
 	{ id: 'history', label: 'History' },
@@ -45,7 +45,7 @@ export function itemsFrom(r: StudyResult): Item[] {
 			.map(s => `${s.author} · ${s.license}`))].join('; ');
 		return { title, text, links: cited(ids), ...evidence(ids), ...(attribution ? { attribution } : {}) };
 	};
-	for (const step of r.guide) {
+	for (const step of r.discoveries ? [] : r.guide) {
 		if (!step.answer || step.id === 'observe') continue; // observe restates the verse shown above
 		if (step.id === 'contextualize' && r.claims.some(claim => claim.layer === 'text' || claim.layer === 'interpretation')) continue;
 		if (step.id === 'trace' && !r.sources.some(s => step.sourceIds.includes(s.id) && s.kind === 'scripture' && s.scope === 'related')) continue;
@@ -54,7 +54,7 @@ export function itemsFrom(r: StudyResult): Item[] {
 		else if (step.id === 'trace') add({ category: 'related', kind: 'Echoes in Scripture', ...base });
 		else add({ category: 'reflection', kind: step.id === 'christ' ? 'Christ connection' : 'Response', ...base });
 	}
-	for (const claim of r.claims) {
+	for (const claim of r.discoveries ? [] : r.claims) {
 		const base = note(claim.title, claim.text, claim.sourceIds);
 		if (claim.layer === 'text') add({ category: 'academic', kind: 'Text & structure', ...base });
 		else if (claim.layer === 'history') add({ category: 'history', kind: historyKind(claim.text), ...base });
@@ -76,8 +76,10 @@ export function itemsFrom(r: StudyResult): Item[] {
 	}
 	for (const paper of r.papers ?? [])
 		add({ category: 'academic', kind: 'Paper', text: paper.title, meta: [paper.authors, paper.year, scopeNote[paper.scope]].filter(Boolean).join(' · '), links: [{ title: paper.doi ? `DOI ${paper.doi}` : 'Open publication', url: paper.url }], scope: paper.scope });
-	for (const story of r.testimonials)
-		add({ category: 'testimonials', kind: story.theme ? capitalized(story.theme) : 'Story', text: story.title, meta: [story.author, scopeNote[story.scope]].filter(Boolean).join(' · '), links: [{ title: 'Read on the forum', url: story.url }], scope: story.scope });
+	for (const story of r.testimonials) {
+		const platform = TESTIMONIAL_PLATFORMS[story.platform ?? 'crosswalk'];
+		add({ category: 'testimonials', kind: platform, text: story.excerpt || story.title, meta: [story.author, story.theme ? capitalized(story.theme) : scopeNote[story.scope]].filter(Boolean).join(' · '), links: [{ title: `Read on ${platform}`, url: story.url }], scope: story.scope });
+	}
 	for (const video of r.videos)
 		add({ category: 'videos', kind: video.reviewed ? 'Curated' : 'YouTube search', text: video.title, meta: [video.channel, video.durationSeconds ? videoTime(video.durationSeconds) : '', scopeNote[video.scope]].filter(Boolean).join(' · '), links: [{ title: 'Watch on YouTube', url: video.url }], scope: video.scope, video });
 	const unique = new Map<string, Item>();
@@ -94,4 +96,15 @@ export function itemsFrom(r: StudyResult): Item[] {
 	const order = (c: Category) => categories.findIndex((x) => x.id === c);
 	return [...unique.values()]
 		.sort((a, b) => order(a.category) - order(b.category) || scopeRank[a.scope] - scopeRank[b.scope]);
+}
+
+/** Interpretive categories count discoveries; media categories count resources. */
+export function studyCounts(result: StudyResult) {
+ const resources = itemsFrom(result);
+ const discoveries = result.discoveries?.items ?? [];
+ const counts = Object.fromEntries(categories.map(({ id }) => [id,
+  result.discoveries && !['videos', 'testimonials'].includes(id)
+   ? discoveries.filter(d => d.category === id).length : resources.filter(r => r.category === id).length
+ ])) as Record<Category, number>;
+ return { discoveries: discoveries.length, resources: resources.length, categories: counts };
 }

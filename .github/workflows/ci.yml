@@ -127,6 +127,8 @@ jobs:
         run: npm ci
       - name: objects/*.json against the KJV and BSB
         run: node site/src/lib/objects/check.mjs
+      - name: Redis for cache integration tests
+        run: sudo apt-get update && sudo apt-get install -y redis-server
       - name: Site unit tests
         working-directory: site
         run: npm test
@@ -139,7 +141,6 @@ jobs:
       - name: Browser test dependencies
         working-directory: site
         run: |
-          sudo apt-get update && sudo apt-get install -y redis-server
           npx --no-install playwright install --with-deps chromium webkit
       - name: Private reader browser tests
         working-directory: site
