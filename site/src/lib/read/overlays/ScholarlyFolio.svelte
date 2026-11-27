@@ -53,7 +53,7 @@
 
 <div bind:this={folio} class="folio" role="dialog" aria-modal="false" aria-label="Go deeper passage study" tabindex="-1" onkeydown={keydown}>
 	<header class="folio-header">
-		<div><h2>{result?.reference ?? 'Passage study'}</h2><p>History, scholarship, reflection, stories, and videos on this passage</p></div>
+		<div><h2>{result?.reference ?? 'Passage study'}</h2><p>A closer look at the words, the evidence, and what they change</p></div>
 		<button type="button" class="icon-button" aria-label="Close study" onclick={close}><Icon name="close" size={18} /></button>
 	</header>
 	<div class="content">
@@ -75,8 +75,10 @@
 					{#each shown as item}
 						<li>
 							<span class="label">{labelOf(item.category)}<span class="kind">{' · '}{item.kind}</span></span>
+							{#if item.title}<h3 class="item-title">{item.title}</h3>{/if}
 							<p class="item-text">{item.text}</p>
 							{#if item.meta}<p class="meta">{item.meta}</p>{/if}
+							{#if item.attribution}<p class="meta">{item.attribution}</p>{/if}
 							{#if item.links.length}<div class="links">{#each item.links as link}<a href={link.url} target="_blank" rel="noopener noreferrer">{link.title} <Icon name="external" size={12} /></a>{/each}</div>{/if}
 						</li>
 					{/each}
@@ -113,6 +115,7 @@
 	.items li { padding:18px 0 19px; border-bottom:1px solid #e9e5dc; }
 	.items li:last-child { border-bottom:0; }
 	.label { color:#4d7669; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+	.item-title { margin:7px 0 0; font:600 19px/1.35 var(--font-reading); letter-spacing:-.015em; }
 	.item-text { margin:5px 0 0; font:15px/1.55 Georgia,serif; }
 	.meta { margin:5px 0 0; color:#596a70; font-size:12px; }
 	.links { display:flex; flex-wrap:wrap; gap:5px 12px; margin-top:8px; }

@@ -70,9 +70,9 @@ test('shows accurate categories, related citations and discovery states', async 
 	await expect(folio.getByText(result.sources[0].excerpt)).toHaveCount(0);
 	await expect(folio.getByText(result.guide[0].answer!)).toHaveCount(0);
 	await folio.getByRole('button', { name: /^Academic/ }).click();
-	await expect(folio.getByText(result.sources[0].excerpt)).toBeVisible();
+	await expect(folio.getByText(result.sources[0].excerpt)).toHaveCount(0);
 	await expect(folio.getByText(result.guide[0].answer!)).toBeVisible();
-	await expect(folio.getByText('Aquifer · CC BY-SA 4.0 · Related background')).toBeVisible();
+	await expect(folio.getByText('Aquifer · CC BY-SA 4.0', { exact: true })).toBeVisible();
 	await expect(folio.getByText('Paper search is not enabled.')).toBeVisible();
 	await folio.getByRole('button', { name: /^Testimonials/ }).click();
 	await expect(folio.getByText('Testimonial search is temporarily unavailable.')).toBeVisible();
@@ -85,6 +85,27 @@ test('shows accurate categories, related citations and discovery states', async 
 	await expect(folio.getByText('No testimonials matched this passage.')).toBeVisible();
 	expect(errors).toEqual([]);
 	expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+});
+
+test('deep research leads with a hook and reasoning, without repeating its source or generic guide summary', async ({ page }) => {
+	const explanation = 'The grammatical form and the verb must be read together. A plural noun alone cannot establish how many actors the sentence describes.';
+	await page.route('**/api/study', route => route.fulfill({ json: {
+		reference:'John 3:16',passageText:'For God so loved the world.',contextText:'',
+		sources:[{id:'note',title:'A grammatical note',author:'Aquifer',kind:'study_note',scope:'direct',tradition:null,url:'https://example.org/grammar',location:'John 3:16',license:'CC BY-SA 4.0',excerpt:'A source summary that should not appear twice.'}],
+		claims:[{layer:'interpretation',title:'Why read the noun and verb together?',text:explanation,sourceIds:['note'],tradition:null}],
+		guide:[{id:'contextualize',question:'',answer:'A generic summary of this reading.',sourceIds:['note']}],
+		terms:[],papers:[],videos:[],testimonials:[],answer:null
+	} }));
+	await page.locator('#v16 .v').first().click({button:'right'});
+	await page.getByRole('button',{name:'More passage actions'}).click();
+	await page.getByRole('menuitem',{name:/Go deeper/i}).click();
+	const folio=page.getByRole('dialog',{name:'Go deeper passage study'});
+	await expect(folio.getByRole('heading',{level:3,name:'Why read the noun and verb together?'})).toBeVisible();
+	await expect(folio.getByText(explanation,{exact:true})).toBeVisible();
+	await expect(folio.locator('.items li')).toHaveCount(1);
+	await expect(folio.getByText('A generic summary of this reading.')).toHaveCount(0);
+	await expect(folio.getByRole('link',{name:'A grammatical note'})).toHaveAttribute('href','https://example.org/grammar');
+	await expect(folio.getByText('Aquifer · CC BY-SA 4.0',{exact:true})).toBeVisible();
 });
 
 test('rejects another email, retires offline caches, and revokes logout sessions', async ({ page, browser }) => {
@@ -108,7 +129,7 @@ test('real Mark 6 evidence leaves History empty when AI is unavailable', async (
  await page.getByRole('button', { name: 'More passage actions' }).click();
  await page.getByRole('menuitem', { name: /Go deeper/i }).click();
  const folio = page.getByRole('dialog', { name: 'Go deeper passage study' });
- await expect(folio.getByRole('heading', { name: 'Mark 6:14', exact: true })).toBeVisible();
+ await expect(folio.getByRole('heading', { level: 2, name: 'Mark 6:14', exact: true })).toBeVisible();
  await expect(folio.getByText('AI explanations are unavailable right now. Sources and language data are still available.')).toBeVisible();
  await folio.getByRole('button', { name: /^History/ }).click();
  await expect(folio.locator('.items li')).toHaveCount(0);

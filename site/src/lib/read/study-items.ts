@@ -12,7 +12,7 @@ export const categories = [
 export type Category = (typeof categories)[number]['id'];
 type Link = { title: string; url: string };
 /** One thing worth noting, filed under one category with a more specific kind. */
-type Item = { category: Category; kind: string; text: string; meta?: string; links: Link[]; scope: EvidenceScope };
+type Item = { category: Category; kind: string; title?: string; text: string; meta?: string; attribution?: string; links: Link[]; scope: EvidenceScope };
 
 const videoTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 const clip = (text: string) => (text.length > 260 ? `${text.slice(0, 257).trimEnd()}…` : text);
@@ -37,28 +37,42 @@ export function itemsFrom(r: StudyResult): Item[] {
 		return [...links.values()];
 	};
 	const items: Item[] = [];
+	const represented = new Set<string>();
 	const add = (item: Omit<Item, 'scope'> & { scope?: EvidenceScope }) => items.push({ scope: 'direct', ...item });
+	const note = (title: string | undefined, text: string, ids: string[]) => {
+		ids.forEach(id => represented.add(id));
+		const attribution = [...new Set(r.sources.filter(s => ids.includes(s.id) && s.license.startsWith('CC BY'))
+			.map(s => `${s.author} · ${s.license}`))].join('; ');
+		return { title, text, links: cited(ids), ...evidence(ids), ...(attribution ? { attribution } : {}) };
+	};
 	for (const step of r.guide) {
 		if (!step.answer || step.id === 'observe') continue; // observe restates the verse shown above
-		const links = cited(step.sourceIds);
-		if (step.id === 'contextualize') add({ category: 'academic', kind: 'Context', text: step.answer, links, ...evidence(step.sourceIds) });
-		else if (step.id === 'trace') add({ category: 'related', kind: 'Echoes in Scripture', text: step.answer, links, ...evidence(step.sourceIds) });
-		else add({ category: 'reflection', kind: step.id === 'christ' ? 'Christ connection' : 'Response', text: step.answer, links, ...evidence(step.sourceIds) });
+		if (step.id === 'contextualize' && r.claims.some(claim => claim.layer === 'text' || claim.layer === 'interpretation')) continue;
+		if (step.id === 'trace' && !r.sources.some(s => step.sourceIds.includes(s.id) && s.kind === 'scripture' && s.scope === 'related')) continue;
+		const base = note(step.title, step.answer, step.sourceIds);
+		if (step.id === 'contextualize') add({ category: 'academic', kind: 'Context', ...base });
+		else if (step.id === 'trace') add({ category: 'related', kind: 'Echoes in Scripture', ...base });
+		else add({ category: 'reflection', kind: step.id === 'christ' ? 'Christ connection' : 'Response', ...base });
 	}
 	for (const claim of r.claims) {
-		const base = { text: claim.text, links: cited(claim.sourceIds), ...evidence(claim.sourceIds) };
-		if (claim.layer === 'history') add({ category: 'history', kind: historyKind(claim.text), ...base });
+		const base = note(claim.title, claim.text, claim.sourceIds);
+		if (claim.layer === 'text') add({ category: 'academic', kind: 'Text & structure', ...base });
+		else if (claim.layer === 'history') add({ category: 'history', kind: historyKind(claim.text), ...base });
 		else if (claim.layer === 'language') add({ category: 'academic', kind: 'Language', ...base });
 		else if (claim.layer === 'uncertainty') add({ category: 'academic', kind: 'Debated', ...base });
 		else if (claim.layer === 'interpretation') add({ category: 'academic', kind: claim.tradition ? `${capitalized(claim.tradition)} reading` : 'Interpretation', ...base });
 	}
+	const hasInsights = items.length > 0;
 	for (const source of r.sources) {
+		if (represented.has(source.id)) continue;
+		// Unselected source summaries are not extra insights in an edited study.
+		if (hasInsights && ['study_note', 'commentary', 'academic', 'scripture'].includes(source.kind)) continue;
 		const link = [{ title: source.title, url: source.url }];
 		const meta = [source.author, source.license, scopeNote[source.scope]].filter(Boolean).join(' · ');
 		if (source.kind === 'scripture' && source.scope === 'related') add({ category: 'related', kind: 'Related passage', text: clip(source.excerpt), meta, links: link, scope: source.scope });
-		if (source.kind === 'historical_record') add({ category: 'history', kind: historyKind(`${source.title} ${source.excerpt}`), text: clip(source.excerpt), meta, links: link, scope: source.scope });
+		if (source.kind === 'historical_record') add({ category: 'history', kind: historyKind(`${source.title} ${source.excerpt}`), title: source.title, text: clip(source.excerpt), meta, links: link, scope: source.scope });
 		else if (source.kind === 'study_note' || source.kind === 'commentary' || source.kind === 'academic')
-			add({ category: 'academic', kind: source.kind === 'study_note' ? 'Study note' : source.kind === 'commentary' ? 'Commentary' : 'Scholarship', text: clip(source.excerpt), meta, links: link, scope: source.scope });
+			add({ category: 'academic', kind: source.kind === 'study_note' ? 'Study note' : source.kind === 'commentary' ? 'Commentary' : 'Scholarship', title: source.title, text: clip(source.excerpt), meta, links: link, scope: source.scope });
 	}
 	for (const paper of r.papers ?? [])
 		add({ category: 'academic', kind: 'Paper', text: paper.title, meta: [paper.authors, paper.year, scopeNote[paper.scope]].filter(Boolean).join(' · '), links: [{ title: paper.doi ? `DOI ${paper.doi}` : 'Open publication', url: paper.url }], scope: paper.scope });
@@ -66,9 +80,18 @@ export function itemsFrom(r: StudyResult): Item[] {
 		add({ category: 'testimonials', kind: story.theme ? capitalized(story.theme) : 'Story', text: story.title, meta: [story.author, scopeNote[story.scope]].filter(Boolean).join(' · '), links: [{ title: 'Read on the forum', url: story.url }], scope: story.scope });
 	for (const video of r.videos)
 		add({ category: 'videos', kind: video.reviewed ? 'Curated' : 'YouTube search', text: video.title, meta: [video.channel, video.durationSeconds ? videoTime(video.durationSeconds) : '', scopeNote[video.scope]].filter(Boolean).join(' · '), links: [{ title: 'Watch on YouTube', url: video.url }], scope: video.scope });
-	const seen = new Set<string>();
+	const unique = new Map<string, Item>();
+	for (const item of items) {
+		const key = item.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+		if (!key) continue;
+		const existing = unique.get(key);
+		if (!existing) unique.set(key, item);
+		else {
+			existing.links = [...new Map([...existing.links, ...item.links].map(link => [link.url, link])).values()];
+			existing.attribution = [...new Set([existing.attribution, item.attribution].filter(Boolean))].join('; ') || undefined;
+		}
+	}
 	const order = (c: Category) => categories.findIndex((x) => x.id === c);
-	return items
-		.filter((item) => item.text && !seen.has(item.text) && seen.add(item.text))
+	return [...unique.values()]
 		.sort((a, b) => order(a.category) - order(b.category) || scopeRank[a.scope] - scopeRank[b.scope]);
 }

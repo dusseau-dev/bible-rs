@@ -8,7 +8,7 @@ const result = (changes: Partial<StudyResult> = {}): StudyResult => ({ reference
 describe('study note presentation', () => {
  it('places related Scripture and traced connections in Related with their source labels', () => {
   const items = itemsFrom(result({ sources:[{...source, id:'scripture',kind:'scripture',excerpt:'A related passage.'}], guide:[{id:'trace', question:'',answer:'An echo in Scripture.',sourceIds:['scripture']}] }));
-  expect(items).toHaveLength(2);
+  expect(items).toHaveLength(1);
   expect(items.every(item => item.category === 'related' && item.scope === 'related')).toBe(true);
   expect(items.find(item => item.text === 'An echo in Scripture.')?.meta).toBe('Related background');
  });
@@ -25,10 +25,43 @@ describe('study note presentation', () => {
   expect(items.find(i => i.text === 'Mixed claim')?.scope).toBe('related');
  });
  it('keeps explicit historical records in History and deduplicates source links', () => {
-  const items = itemsFrom(result({ sources: [source, { ...source, id: 'record', kind: 'historical_record', excerpt: 'A historical artifact.' }], claims: [{ layer: 'language', text: 'Word meaning', sourceIds: ['note', 'record'], tradition: null }] }));
+  const items = itemsFrom(result({ sources: [source, { ...source, id: 'record', kind: 'historical_record', excerpt: 'A historical artifact.' }], claims: [{ layer: 'language', text: 'Word meaning', sourceIds: ['note', 'note'], tradition: null }] }));
   expect(items.find(i => i.text === 'A historical artifact.')?.category).toBe('history');
   expect(items.find(i => i.text === 'Word meaning')?.links).toHaveLength(1);
  });
+});
+
+it('shows the hook and explanation once, with the source credit rather than another source summary', () => {
+ const items = itemsFrom(result({ claims: [{ layer: 'language', title: 'One word, two possible readings?', text: 'The same Greek word can name wind or spirit; its context determines the reading.', sourceIds: ['note'], tradition: null }] }));
+ expect(items).toHaveLength(1);
+ expect(items[0]).toMatchObject({ title: 'One word, two possible readings?', attribution: 'Aquifer · CC BY-SA 4.0' });
+ expect(items[0].links[0].url).toBe(source.url);
+ expect(items[0].text).not.toBe(source.excerpt);
+});
+
+it('does not pad an edited study with unused source summaries', () => {
+ const items = itemsFrom(result({ sources: [source, {...source, id:'unused', excerpt:'A generic summary.'}], claims: [{ layer:'language', title:'A grammatical puzzle', text:'A distinct explanation.', sourceIds:['note'], tradition:null }] }));
+ expect(items.map(item => item.text)).toEqual(['A distinct explanation.']);
+});
+
+it('keeps a first-principles textual insight instead of also listing its generic context summary', () => {
+ const items = itemsFrom(result({ claims:[{layer:'text',title:'A heading or a first event?',text:'The opening can frame the account that follows.',sourceIds:['note'],tradition:null}], guide:[{id:'contextualize',question:'',answer:'The opening summarizes creation.',sourceIds:['note']}] }));
+ expect(items).toHaveLength(1);
+ expect(items[0]).toMatchObject({title:'A heading or a first event?',kind:'Text & structure'});
+});
+
+it('does not label a passage paraphrase as an echo without another Scripture source', () => {
+ const items = itemsFrom(result({ guide: [{ id:'trace', question:'', title:'An apparent echo', answer:'God brings order out of chaos.', sourceIds:['note'] }] }));
+ expect(items.some(item => item.kind === 'Echoes in Scripture')).toBe(false);
+});
+
+it('merges repeated text despite case or punctuation while preserving both citations', () => {
+ const items = itemsFrom(result({ sources:[source,{...source,id:'second',url:'https://example.org/second'}], claims:[
+  {layer:'language',text:'A shared observation.',sourceIds:['note'],tradition:null},
+  {layer:'interpretation',text:'A shared observation!',sourceIds:['second'],tradition:null}
+ ] }));
+ expect(items).toHaveLength(1);
+ expect(items[0].links).toHaveLength(2);
 });
 
 it('keeps the source license beside a displayed excerpt', () => {

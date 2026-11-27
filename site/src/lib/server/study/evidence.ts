@@ -43,6 +43,23 @@ export const passageLabel = (p: StudyPassage) =>
 
 const point = ([chapter, verse]: [number, number]) => chapter * 1000 + verse;
 
+const referenceNames = new Map(BOOKS.flatMap(book =>
+	[book.name, book.abbrev, ...(book.name === 'Psalms' ? ['Psalm'] : [])].map(name => [name.toLowerCase(), book] as const)));
+const referencePattern = new RegExp(`\\b(${[...referenceNames.keys()].sort((a, b) => b.length - a.length).join('|')})\\s+(\\d{1,3}):(\\d{1,3})(?:[–−-](\\d{1,3}))?(?![\\d:–−-])`, 'gi');
+
+/** Load actual WEB text for cross-references explicitly named by a passage's study notes. */
+export function noteReferences(notes: Note[], passage: StudyPassage): StudyPassage[] {
+	const found = new Map<string, StudyPassage>();
+	for (const note of notes) for (const match of note.text.matchAll(referencePattern)) {
+		const book = referenceNames.get(match[1].toLowerCase())!;
+		const ref = passageFrom({ book: book.index, chapter: Number(match[2]), firstVerse: Number(match[3]), lastVerse: Number(match[4] || match[3]) });
+		if (!ref || ref.lastVerse > chapterVerses(book.firstChapter + ref.chapter - 1)) continue;
+		if (ref.book === passage.book && ref.chapter === passage.chapter) continue;
+		found.set(`${ref.book}:${ref.chapter}:${ref.firstVerse}:${ref.lastVerse}`, ref);
+	}
+	return [...found.values()].slice(0, 3);
+}
+
 async function bookData(book: number): Promise<Record<string, ChapterData>> {
 	const loader = files[`./data/${String(book).padStart(2, '0')}.json`];
 	return loader ? ((await loader()) as Record<string, ChapterData>) : {};
@@ -134,6 +151,18 @@ export async function localEvidence(p: StudyPassage): Promise<{
 		.slice(0, 8);
 	const sources: StudySource[] = [bibleSource];
 	sources.push(...historicalRecordSources(p));
+	for (const ref of noteReferences(notes.map(({ n }) => n), p)) {
+		const book = BOOKS[ref.book];
+		const excerpt = c.verses('web', book.firstChapter + ref.chapter - 1)
+			.filter(verse => verse.number >= ref.firstVerse && verse.number <= ref.lastVerse)
+			.map(verse => `${verse.number} ${verse.runs.map(run => run.text).join('')}`).join('\n');
+		sources.push({
+			id: `bible:web:${bookSlug(book)}:${ref.chapter}:${ref.firstVerse}-${ref.lastVerse}`,
+			title: `${passageLabel(ref)} · World English Bible`, author: 'World English Bible',
+			kind: 'scripture', tradition: null, scope: 'related', url: `/read/web/${bookSlug(book)}/${ref.chapter}#v${ref.firstVerse}`,
+			location: passageLabel(ref), license: 'Public domain', excerpt
+		});
+	}
 	if (p.book === 0 && p.chapter === 3 && p.firstVerse <= 21 && p.lastVerse >= 7) {
 		const romansIndex = BOOKS[44].firstChapter + 4;
 		const romans = c.verses('web', romansIndex);

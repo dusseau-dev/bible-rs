@@ -110,10 +110,16 @@ is made, and local evidence remains available when the study request itself is a
 disabled, limited, failed, partial, and completed searches. Only completed empty searches report no
 matches. Reviewed evidence remains visible. Generated claims retain the context/background labels
 of their citations, and language study notes belong to Academic even when thematically related.
-Displayed source excerpts retain their author, license, and evidence scope. Generated History
-claims undergo a second model review that rejects doctrine, literary summaries and unsupported
-certainty; the server also requires a verbatim supporting quote from an eligible cited source.
-If that review fails, History claims are withheld with a notice while other study content remains.
+Research is a technical study from first principles: a specific detail, the evidence and reasoning,
+and its consequence for reading the passage. Each generated note has a source-grounded hook title
+and a short explanation. Generic summaries and repeated ideas are rejected rather than used to
+fill categories. A second model pass reviews titles and explanations together, with the server
+requiring an exact supporting quote from a cited source. History additionally requires an eligible
+historical source and a historical verdict. Study notes can supply cross-references, whose actual
+WEB text is loaded before a Scripture connection is generated. The list shows edited insights and
+their source credits without appending the same source summaries; original excerpts remain the
+fallback when inference or review is unavailable. If review fails, generated notes are withheld
+with a notice. Displayed source excerpts retain their author, license, and evidence scope.
 This is evidence checking, not a guarantee that a source or model is historically infallible.
 
 Optional server environment variables:
@@ -162,10 +168,10 @@ guide answer does not appear as History, and related citations retain their back
 Verify the owned preview with its configured Redis and provider keys: sign in, select a passage,
 open Go deeper, follow a History citation, and try Ask. Check source-only behavior when inference
 is unavailable. Do not copy personal browser sessions or expose keys in screenshots or logs.
-Generation and history review share a single 60-second provider deadline at most; discovery completes before inference, so allow
+Generation and note review share a single 60-second provider deadline at most; discovery completes before inference, so allow
 for both stages when checking host execution limits. Paid requests are bounded by six per minute,
 60 study generations per day, and the model output token caps. Each allowed generation makes at
-most two model calls (generation plus History review), each capped at 4,000 output tokens for
+most two model calls (generation plus editorial/evidence review), each capped at 4,000 output tokens for
 CheaperInference or 3,000 for OpenAI; the daily request limit is not a currency-denominated cap.
 
 If study responses regress, remove the server AI key to serve local evidence while investigating,

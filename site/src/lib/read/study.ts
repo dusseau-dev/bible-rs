@@ -35,6 +35,8 @@ export interface StudyTerm {
 
 export interface StudyClaim {
 	layer: StudyLayer;
+	/** A source-grounded question or finding; optional for older responses. */
+	title?: string;
 	text: string;
 	sourceIds: string[];
 	tradition: Tradition;
@@ -68,6 +70,7 @@ export interface StudyPaper {
 export interface StudyGuideStep {
 	id: StudyStepId;
 	question: string;
+	title?: string;
 	answer: string | null;
 	sourceIds: string[];
 	connection?: 'explicit' | 'allusion' | 'theme';

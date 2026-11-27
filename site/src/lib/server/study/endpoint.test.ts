@@ -82,6 +82,6 @@ it('tells the reader when history verification fails while retaining other study
  const body = await (await send({ ...input, aiKey: 'ci_live_fixture' })).json();
  expect(body.claims).toEqual([]);
  expect(body.answer?.text).toBe('A cited answer.');
- expect(body.message).toBe('Historical facts could not be checked right now. Other study notes and sources are still available.');
+ expect(body.message).toBe('The study notes could not be checked right now. Source excerpts are still available.');
  expect(JSON.stringify(body)).not.toContain('private verification diagnostics');
 });
