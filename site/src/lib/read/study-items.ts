@@ -1,5 +1,5 @@
 import { historyTopicLabel } from './history-topics';
-import type { EvidenceScope, StudyResult, StudyVideo } from './study';
+import { TESTIMONIAL_PLATFORMS, type EvidenceScope, type StudyResult, type StudyVideo } from './study';
 
 export const categories = [
 	{ id: 'history', label: 'History' },
@@ -76,8 +76,10 @@ export function itemsFrom(r: StudyResult): Item[] {
 	}
 	for (const paper of r.papers ?? [])
 		add({ category: 'academic', kind: 'Paper', text: paper.title, meta: [paper.authors, paper.year, scopeNote[paper.scope]].filter(Boolean).join(' · '), links: [{ title: paper.doi ? `DOI ${paper.doi}` : 'Open publication', url: paper.url }], scope: paper.scope });
-	for (const story of r.testimonials)
-		add({ category: 'testimonials', kind: story.theme ? capitalized(story.theme) : 'Story', text: story.title, meta: [story.author, scopeNote[story.scope]].filter(Boolean).join(' · '), links: [{ title: 'Read on the forum', url: story.url }], scope: story.scope });
+	for (const story of r.testimonials) {
+		const platform = TESTIMONIAL_PLATFORMS[story.platform ?? 'crosswalk'];
+		add({ category: 'testimonials', kind: platform, text: story.excerpt || story.title, meta: [story.author, story.theme ? capitalized(story.theme) : scopeNote[story.scope]].filter(Boolean).join(' · '), links: [{ title: `Read on ${platform}`, url: story.url }], scope: story.scope });
+	}
 	for (const video of r.videos)
 		add({ category: 'videos', kind: video.reviewed ? 'Curated' : 'YouTube search', text: video.title, meta: [video.channel, video.durationSeconds ? videoTime(video.durationSeconds) : '', scopeNote[video.scope]].filter(Boolean).join(' · '), links: [{ title: 'Watch on YouTube', url: video.url }], scope: video.scope, video });
 	const unique = new Map<string, Item>();

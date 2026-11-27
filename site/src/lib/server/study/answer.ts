@@ -198,7 +198,7 @@ Set historical=true only for sourced historical geography, economy, rulers/insti
 	return kept;
 }
 
-async function requestJson(key: string, instruction: string, content: unknown, outputSchema: object, signal: AbortSignal): Promise<unknown> {
+export async function requestJson(key: string, instruction: string, content: unknown, outputSchema: object, signal: AbortSignal): Promise<unknown> {
 	const cheaperInference = key.startsWith('ci_live_');
 	const messages = [
 		{ role: 'developer', content: cheaperInference ? `${instruction} Return a JSON object matching this schema: ${JSON.stringify(outputSchema)}` : instruction },

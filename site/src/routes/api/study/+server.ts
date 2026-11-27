@@ -70,10 +70,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		testimonials: reviewedTestimonials(passage),
 		answer: null
 	};
+	const serverAiKey = CHEAPERINFERENCE_API_KEY?.trim() || OPENAI_API_KEY?.trim() || undefined;
 	const [verified, research, community, papers, videos] = await Promise.allSettled([
 		verifiedPassageVideos(passage, refreshVideo ? youtubeKey : undefined),
 		searchExa ? discover(passage, exaKey!).then(items => ({ items, status: 'complete' as const })) : Promise.resolve<DiscoveryResult<StudySource>>({ items: [], status: exaPermission as Exclude<typeof exaPermission, 'allowed'> }),
-		searchExa ? discoverTestimonials(passage, exaKey!) : Promise.resolve<DiscoveryResult<StudyTestimonial>>({ items: [], status: exaPermission as Exclude<typeof exaPermission, 'allowed'> }),
+		exaKey ? discoverTestimonials(passage, local.passageText, exaKey, exaPermission, serverAiKey) : Promise.resolve<DiscoveryResult<StudyTestimonial>>({ items: [], status: 'disabled' }),
 		passagePapers(passage, process.env.OPENALEX_API_KEY?.trim(), client),
 		discoverPassageVideos(passage, youtubeKey, client)
 	]);
@@ -82,7 +83,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	if (community.status === 'fulfilled') { result.testimonials = mergeTestimonials(result.testimonials, community.value.items); discovery.testimonials = community.value.status; }
 	if (papers.status === 'fulfilled') { result.papers = papers.value.items; discovery.papers = papers.value.status; }
 	if (videos.status === 'fulfilled') { result.videos = mergeVideos(result.videos, videos.value.items); discovery.videos = videos.value.status; }
-	const aiKey = CHEAPERINFERENCE_API_KEY?.trim() || OPENAI_API_KEY?.trim() || input.aiKey?.trim() || input.openaiKey?.trim();
+	const aiKey = serverAiKey || input.aiKey?.trim() || input.openaiKey?.trim();
 	if (aiKey && await allowAi()) {
 		try {
 			const generated = await generateStudy({
