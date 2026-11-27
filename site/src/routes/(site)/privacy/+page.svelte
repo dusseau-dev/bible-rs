@@ -80,8 +80,17 @@
 	</p>
 	<p>
 		Redis also stores request-limit counters and successful search metadata for up to seven days.
-		Study counters identify a request address using a daily salted hash. The app does not fetch
-		paper bodies or video transcripts. Reviewed links can remain visible when discovery fails.
+		Study counters identify a request address using a daily salted hash. The publication finder retrieves metadata rather than paper bodies; deeper research can retrieve
+		bounded excerpts from approved scholarly pages. The app does not fetch video transcripts. Reviewed links can remain visible when discovery fails.
+	</p>
+	<p>
+		Expandable discoveries also search scholarly sources, public questions, and relevant news.
+		Forum discussions and news identify research leads; factual lessons use cited foundation
+		evidence. Redis stores research excerpts and checked lessons in an owner-scoped cache for up
+		to 24 hours so reopening a lesson does not generate it again. Saved notes and reading-library
+		contents are excluded. Optional licensed museum images load directly from the credited museum;
+		the image host receives the normal network request, including your IP address, without a page
+		referrer. Private lessons are not saved for offline use.
 	</p>
 	<h2>Online translations and local storage</h2>
 	<p>

@@ -79,7 +79,7 @@ it('tells the reader when history verification fails while retaining other study
   claims: [{ layer: 'history', text: 'A proposed fact needing verification.', sourceIds: [note.id], tradition: 'none' }],
   answer: { text: 'A cited answer.', sourceIds: ['bible:web'] }, guide: []
  }) } }] }))).mockRejectedValueOnce(new Error('private verification diagnostics'));
- const body = await (await send({ ...input, aiKey: 'ci_live_fixture' })).json();
+ const body = await (await send({ ...input, mode: 'ask', question: 'What does this passage say?', aiKey: 'ci_live_fixture' })).json();
  expect(body.claims).toEqual([]);
  expect(body.answer?.text).toBe('A cited answer.');
  expect(body.message).toBe('The study notes could not be checked right now. Source excerpts are still available.');

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+vi.mock('./limits.js', () => ({ allowAi: vi.fn().mockResolvedValue(true) }));
 import type { StudySource } from '#lib/read/study.js';
 import { generateStudy, validateGenerated } from './answer';
 

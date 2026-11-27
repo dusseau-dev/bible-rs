@@ -5,7 +5,10 @@ import type { RequestHandler } from './$types';
 import type { DiscoveryResult, StudyRequest, StudyResult, StudySource, StudyTestimonial } from '#lib/read/study.js';
 import { generateStudy } from '#lib/server/study/answer.js';
 import { localEvidence, passageFrom, passageLabel, passageVideos, verifiedPassageVideos } from '#lib/server/study/evidence.js';
-import { allowAi, allowDiscovery, allowStudy, allowVideoRefresh } from '#lib/server/study/limits.js';
+import { allowDiscovery, allowStudy, allowVideoRefresh } from '#lib/server/study/limits.js';
+import { collectResearch } from '#lib/server/study/research-packet.js';
+import { selectDiscoveries } from '#lib/server/study/discoveries.js';
+import { savePacket } from '#lib/server/study/lesson-store.js';
 import { discover } from '#lib/server/study/research.js';
 import { buildGuide } from '#lib/server/study/guide.js';
 import { discoverTestimonials, mergeTestimonials, reviewedTestimonials } from '#lib/server/study/community.js';
@@ -13,11 +16,12 @@ import { passagePapers, reviewedPapers } from '#lib/server/study/academic.js';
 import { discoverPassageVideos, mergeVideos } from '#lib/server/study/youtube.js';
 
 export const prerender = false;
+export const config = { maxDuration: 90 };
 
 const headers = { 'cache-control': 'no-store', 'x-robots-tag': 'noindex' };
 const fail = (status: number, error: string) => json({ error }, { status, headers });
 
-export const POST: RequestHandler = async ({ request, getClientAddress, url }) => {
+export const POST: RequestHandler = async ({ request, getClientAddress, url, locals }) => {
 	const origin = request.headers.get('origin');
 	if (origin && origin !== url.origin) return fail(403, 'Cross-site study requests are not allowed');
 	if (!request.headers.get('content-type')?.startsWith('application/json')) return fail(415, 'Expected JSON');
@@ -70,10 +74,12 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 		testimonials: reviewedTestimonials(passage),
 		answer: null
 	};
+	const signal = AbortSignal.any([request.signal, AbortSignal.timeout(75_000)]);
+	const packetPromise = input.mode === 'open' ? collectResearch(passage, local.sources, client, exaKey, signal) : null;
 	const serverAiKey = CHEAPERINFERENCE_API_KEY?.trim() || OPENAI_API_KEY?.trim() || undefined;
 	const [verified, research, community, papers, videos] = await Promise.allSettled([
 		verifiedPassageVideos(passage, refreshVideo ? youtubeKey : undefined),
-		searchExa ? discover(passage, exaKey!).then(items => ({ items, status: 'complete' as const })) : Promise.resolve<DiscoveryResult<StudySource>>({ items: [], status: exaPermission as Exclude<typeof exaPermission, 'allowed'> }),
+		searchExa && input.mode !== 'open' ? discover(passage, exaKey!).then(items => ({ items, status: 'complete' as const })) : Promise.resolve<DiscoveryResult<StudySource>>({ items: [], status: exaPermission as Exclude<typeof exaPermission, 'allowed'> }),
 		exaKey ? discoverTestimonials(passage, local.passageText, exaKey, exaPermission, serverAiKey) : Promise.resolve<DiscoveryResult<StudyTestimonial>>({ items: [], status: 'disabled' }),
 		passagePapers(passage, process.env.OPENALEX_API_KEY?.trim(), client),
 		discoverPassageVideos(passage, youtubeKey, client)
@@ -84,7 +90,20 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url }) =
 	if (papers.status === 'fulfilled') { result.papers = papers.value.items; discovery.papers = papers.value.status; }
 	if (videos.status === 'fulfilled') { result.videos = mergeVideos(result.videos, videos.value.items); discovery.videos = videos.value.status; }
 	const aiKey = serverAiKey || input.aiKey?.trim() || input.openaiKey?.trim();
-	if (aiKey && await allowAi()) {
+	if (input.mode === 'open') {
+		const packet = await packetPromise!;
+		discovery.sources = packet.research.scholarship;
+		const known = new Set(result.sources.map(source => source.id));
+		result.sources.push(...packet.documents.filter(d => !known.has(d.source.id)).map(d => ({ ...d.source, excerpt: d.source.excerpt.slice(0, 600) })));
+		try {
+			const items = aiKey ? await selectDiscoveries(packet, aiKey, AbortSignal.any([signal, AbortSignal.timeout(50_000)])) : [];
+			try { result.discoveries = await savePacket(locals?.ownerEmail || '', packet, items); }
+			catch { result.discoveries = await savePacket('', packet, items); }
+			if (!items.length) result.message = aiKey
+				? 'No discoveries could be verified from the available evidence. Source excerpts are still available.'
+				: 'AI explanations are unavailable right now. Sources and language data are still available.';
+		} catch { result.message = 'Discoveries are unavailable right now. Source excerpts are still available.'; }
+	} else if (aiKey) {
 		try {
 			const generated = await generateStudy({
 				passage,

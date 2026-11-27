@@ -98,3 +98,13 @@ it('retains thumbnail metadata for curated and discovered videos', () => {
  expect(items.map(item=>item.kind)).toEqual(['Curated','YouTube search']);
  expect(items.every(item=>item.meta==='Bible teaching · 2:45 · Chapter context')).toBe(true);
 });
+
+it('counts discoveries separately and preserves supporting resources without duplicate old claims', async () => {
+ const { studyCounts } = await import('./study-items');
+ const { fixtureDiscovery } = await import('../server/study/discovery-fixtures');
+ const r = result({ sources: [source], claims: [{ layer: 'text', text: 'Legacy duplicate', sourceIds: [source.id], tradition: null }], discoveries: { packetId: 'packet', evidenceVersion: '1', promptVersion: '1', items: [fixtureDiscovery()], research: { scholarship: 'complete', questions: 'disabled', news: 'disabled' } } });
+ expect(itemsFrom(r).some(item => item.text === 'Legacy duplicate')).toBe(false);
+ expect(studyCounts(r).discoveries).toBe(1);
+ expect(studyCounts(r).resources).toBe(itemsFrom(r).length);
+ expect(studyCounts(r).categories.academic).toBe(1);
+});

@@ -1,0 +1,21 @@
+import { expect, it, vi } from 'vitest';
+vi.mock('./answer.js', () => ({ requestJson: vi.fn() }));
+vi.mock('./evidence-review.js', () => ({ reviewUnits: vi.fn() }));
+import { requestJson } from './answer.js';
+import { reviewUnits } from './evidence-review.js';
+import { selectDiscoveries } from './discoveries';
+import type { ResearchPacket } from './research-packet';
+const unit = (id: string, text: string) => ({ id, text, sourceIds: ['s'], basis: 'text', tradition: null });
+const discovery = { id: 'model-id', category: 'related', title: unit('t', 'A supported contrast'), explanation: [unit('e', 'evidence '.repeat(80))], payoff: unit('p', 'Read the contrast in its surrounding passage.') };
+it('allows fewer than three but rejects an unsupported title and deduplicates repeated hooks', async () => {
+ const packet = { documents: [{ role: 'foundation', source: { id: 's' } }] } as ResearchPacket;
+ vi.mocked(requestJson).mockResolvedValue({ items: [discovery] });
+ vi.mocked(reviewUnits).mockResolvedValue(new Set(['e', 'p']));
+ expect(await selectDiscoveries(packet, 'key', AbortSignal.timeout(1000))).toEqual([]);
+ vi.mocked(reviewUnits).mockResolvedValue(new Set(['t', 'e', 'p']));
+ const selected = await selectDiscoveries(packet, 'key', AbortSignal.timeout(1000));
+ expect(selected).toHaveLength(1);
+ expect(selected[0].id).not.toBe('model-id');
+ vi.mocked(requestJson).mockResolvedValue({ items: [discovery, { ...discovery, id: 'another' }] });
+ expect(await selectDiscoveries(packet, 'key', AbortSignal.timeout(1000))).toHaveLength(1);
+});

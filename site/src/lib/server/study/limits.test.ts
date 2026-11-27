@@ -5,7 +5,7 @@ vi.mock('@upstash/ratelimit', () => ({ Ratelimit: class {
 	static slidingWindow() {} static fixedWindow() {}
 	limit = mock.limit;
 } }));
-import { allowAi, allowDiscovery, allowPaperSearch, allowStudy, allowVideoRefresh, allowVideoSearch } from './limits';
+import { allowLessonStatus, allowAi, allowDiscovery, allowPaperSearch, allowStudy, allowVideoRefresh, allowVideoSearch } from './limits';
 beforeEach(() => vi.clearAllMocks());
 it('treats Upstash fail-open timeout responses as unavailable', async () => {
 	mock.limit.mockResolvedValue({ success: true, reason: 'timeout' });
@@ -15,4 +15,5 @@ it('treats Upstash fail-open timeout responses as unavailable', async () => {
 	expect(await allowVideoSearch('test')).toBe('failed');
 	expect(await allowVideoRefresh()).toBe(false);
 	expect(await allowAi()).toBe(false);
+	expect(await allowLessonStatus('owner')).toBe('failed');
 });

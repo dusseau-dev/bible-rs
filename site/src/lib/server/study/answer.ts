@@ -2,6 +2,7 @@ import type { StudyClaim, StudyGuideStep, StudyPassage, StudySource, StudyTerm, 
 import { passageLabel } from './evidence.js';
 import { buildGuide, type GeneratedGuideStep } from './guide.js';
 import { HISTORY_TOPICS } from './historical.js';
+import { allowAi } from './limits.js';
 
 const LAYERS = ['text', 'history', 'language', 'interpretation', 'uncertainty'] as const;
 const TRADITIONS = ['none', 'protestant', 'catholic', 'orthodox', 'jewish'] as const;
@@ -198,17 +199,21 @@ Set historical=true only for sourced historical geography, economy, rulers/insti
 	return kept;
 }
 
-export async function requestJson(key: string, instruction: string, content: unknown, outputSchema: object, signal: AbortSignal): Promise<unknown> {
+export async function requestJson(key: string, instruction: string, content: unknown, outputSchema: object, signal: AbortSignal, options?: { maxOutputTokens?: number }): Promise<unknown> {
+	const max = options?.maxOutputTokens;
+	if (max !== undefined && (!Number.isInteger(max) || max < 1 || max > 8000)) throw new Error('Invalid AI output limit');
+	if (!await allowAi()) throw new Error('AI budget unavailable');
+	signal.throwIfAborted();
 	const cheaperInference = key.startsWith('ci_live_');
 	const messages = [
 		{ role: 'developer', content: cheaperInference ? `${instruction} Return a JSON object matching this schema: ${JSON.stringify(outputSchema)}` : instruction },
 		{ role: 'user', content: JSON.stringify(content) }
 	];
 	const request = cheaperInference ? {
-		model: 'gpt-5.4-mini', max_tokens: 4000,
+		model: 'gpt-5.4-mini', max_tokens: max ?? 4000,
 		response_format: { type: 'json_object' }, messages
 	} : {
-		model: 'gpt-5-mini', store: false, max_output_tokens: 3000,
+		model: 'gpt-5-mini', store: false, max_output_tokens: max ?? 3000,
 		text: { format: { type: 'json_schema', name: 'passage_study', strict: true, schema: outputSchema } }, input: messages
 	};
 	const provider = cheaperInference ? 'CheaperInference' : 'OpenAI';

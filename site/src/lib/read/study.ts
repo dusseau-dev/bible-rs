@@ -1,3 +1,4 @@
+import type { DiscoveryBundle } from './discoveries';
 /** The web study panel's public request and response contract. */
 export interface StudyPassage {
 	book: number;
@@ -96,6 +97,7 @@ export interface StudyTestimonial {
 }
 
 export interface StudyResult {
+	discoveries?: DiscoveryBundle;
 	/** Additive for older clients; completed with no results differs from not searched. */
 	discovery?: Record<DiscoveryKind, DiscoveryStatus>;
 	reference: string;

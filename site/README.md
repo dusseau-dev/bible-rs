@@ -152,6 +152,7 @@ the passage. The app does not summarize video audio or claim a transcript exists
 
 - Requires Node >= 22.17 (SvelteKit 3). `.npmrc` sets `engine-strict`, so on a newer Node use `npm install --engine-strict=false`.
 - `npm ci && npm run check && npm test && npm run build && npm run check:private-build` checks types, behavior, and the authenticated production output. Protected pages/data are not prerendered.
+- `npm test` includes a disposable Redis integration test for lesson claims and atomic publication; install `redis-server` and `redis-cli` locally first. CI installs them before unit tests.
 - `npm run test:e2e` runs desktop/mobile headless Chromium and mobile WebKit against the production build. Install local `redis-server`, `redis-cli`, and `openssl`, then `npx --no-install playwright install chromium webkit` first. The harness uses HTTPS with a disposable localhost certificate, disposable Redis and fixture credentials on ports 55141, 55143, and 56379; it never uses real provider keys. Certificate exceptions are confined to the test browsers. Tests cover real authentication, API denial, local evidence, categories, search notices, logout, PWA installation/update/offline behavior, responsive book navigation and note persistence. Interaction coverage also includes the passage toolbar/menu, collections, reading plans, translation imports/removal, image sharing, Settings and backups, search/comparison, onboarding, command/shortcut panels, public pages, and the Ark viewer. CI installs these prerequisites and retains browser artifacts only on failure.
 - QA storage state is gitignored at `playwright/.auth/qa-user.json` (mode 600); browser failure artifacts are under `../.context/playwright-results`. No personal browser profile is used.
 - Deploy only to a project owned by this fork's owner. The upstream Vercel configuration builds from `site/`; include files outside the root directory so `../data/translations` is available. Configure owner authentication before enabling the deployment URL. The upstream host-redirect adapter is disabled in this fork.
@@ -168,11 +169,47 @@ guide answer does not appear as History, and related citations retain their back
 Verify the owned preview with its configured Redis and provider keys: sign in, select a passage,
 open Go deeper, follow a History citation, and try Ask. Check source-only behavior when inference
 is unavailable. Do not copy personal browser sessions or expose keys in screenshots or logs.
-Generation and note review share a single 60-second provider deadline at most; discovery completes before inference, so allow
-for both stages when checking host execution limits. Paid requests are bounded by six per minute,
-60 study generations per day, and the model output token caps. Each allowed generation makes at
-most two model calls (generation plus editorial/evidence review), each capped at 4,000 output tokens for
-CheaperInference or 3,000 for OpenAI; the daily request limit is not a currency-denominated cap.
+Every provider model call (including evidence review) consumes its own durable grant from the
+shared six-per-minute / 60-per-day budget. Legacy answers retain their existing output caps;
+discovery selection permits 5,000 output tokens and full lessons/review up to 8,000. The daily
+request limit is not a currency-denominated cap. New study routes declare a 90-second host limit,
+with a 75-second request deadline and a shared 50-second composition/review deadline.
+
+### Expandable discoveries
+
+Go deeper offers up to five reviewed discoveries (target three to five when evidence permits),
+each with an 80–120-word preview and inline citations. Expanding one requests a 900–1,200-word
+lesson, reading exercise, and structured visual. Completed lessons reopen without generation.
+Discoveries and supporting resources have separate counts; Further reading preserves papers,
+forum links, and shorts. Thin evidence returns fewer discoveries or an insufficient-evidence
+message, never padded lessons. Ask/Explain continue using their existing path.
+
+Initial research makes at most three Exa searches (scholarship, public questions, relevant news),
+six results each. Forums/news supply leads, never factual support. A lesson can make one further
+search and one contents request for up to four server-discovered approved URLs. Retained evidence
+is bounded to 16 documents / 48,000 characters; every paid search/contents call needs a separate
+discovery-budget grant. Retrieved documents remain untrusted input. Factual title premises,
+prose, image captions, visual nodes/edges and numeric data undergo a separate review against
+verbatim excerpts, with accepted support records retained in the private cache. AI evidence
+checking does not establish historical certainty. The test suite uses synthetic prose and
+mocked reviewers; live editorial quality must also be evaluated with configured providers.
+
+Redis stores owner-scoped research and checked lessons for at most 24 hours, keyed by opaque IDs
+and evidence/prompt/schema versions. Concurrent expansions share a 90-second claim with atomic,
+token-checked publication. Status polling has a separate 60/minute owner limit and consumes no
+generation grants. No private lesson is cached offline. If storage fails, reviewed previews may
+remain readable but expansion is disabled. A server AI key is required to expand lessons;
+per-request keys are never retained. Disabled search/AI and partial research stay explicit.
+
+Visuals use application-owned SVG with accessible descriptions and data lists. Numeric axes need
+sourced values/units; geography is a coordinate plot, not a terrain map. Images are optional and
+come only from a reviewed registry with credit, provenance, date, and reuse rights. The initial
+registry contains [Met object 86.11.197](https://www.metmuseum.org/art/collection/search/321775),
+verified as public domain under [the museum’s CC0 policy](https://www.metmuseum.org/hubs/open-access)
+on 2026-11-27, for passages concerning Sennacherib (2 Kings 18–19, Isaiah 36–37, 2 Chronicles 32).
+An image loading failure preserves its caption/source. New images require a verified record and
+rights review; unknown rights remain link-only.
+
 
 If study responses regress, remove the server AI key to serve local evidence while investigating,
 or restore the last verified authenticated deployment as described under **Private owner setup**.

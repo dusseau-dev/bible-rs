@@ -12,7 +12,7 @@ it('does not serve the reader to an unauthenticated request', async () => {
 });
 
 it('rejects API and data requests, and only resolves verified sessions with private caching', async () => {
-	for (const path of ['/api/study', '/api/nlt', '/translations/web.bbl', '/read/kjv/john/3']) {
+	for (const path of ['/api/study', '/api/study/lesson', '/api/nlt', '/translations/web.bbl', '/read/kjv/john/3']) {
 		const url = new URL(`https://private.example${path}`);
 		const event = { url, request: new Request(url), cookies: { get: () => 'token' }, locals: {}, isDataRequest: true };
 		auth.session.mockResolvedValue(null);
