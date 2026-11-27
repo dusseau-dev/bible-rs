@@ -102,16 +102,20 @@
 		color: var(--ink);
 	}
 
-	.secondary:hover {
-		background-image: linear-gradient(var(--hover-wash), var(--hover-wash));
+	@media (hover: hover) and (pointer: fine) {
+		.secondary:hover {
+			background-image: linear-gradient(var(--hover-wash), var(--hover-wash));
+		}
 	}
 
 	.ghost {
 		color: var(--accent);
 	}
 
-	.ghost:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.ghost:hover {
+			background: var(--fill);
+		}
 	}
 
 	.k {

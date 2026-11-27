@@ -97,10 +97,12 @@
 		box-shadow: var(--shadow-knob);
 	}
 
-	input:hover::-webkit-slider-thumb {
-		box-shadow:
+	@media (hover: hover) and (pointer: fine) {
+		input:hover::-webkit-slider-thumb {
+			box-shadow:
 			var(--shadow-knob),
 			0 0 0 4px var(--fill-strong);
+		}
 	}
 
 	input:active::-webkit-slider-thumb,
@@ -122,5 +124,10 @@
 		margin-left: -1px;
 		border-radius: 1px;
 		background: var(--ink-3);
+	}
+	/* Enlarge the hit area, retaining the track and thumb dimensions. */
+	@media (pointer: coarse) {
+		.slider, input { height:44px; }
+		.ticks span { top:27px; }
 	}
 </style>

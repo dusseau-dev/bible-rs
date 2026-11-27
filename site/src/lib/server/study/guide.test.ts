@@ -25,4 +25,13 @@ describe('buildGuide', () => {
 		expect(step.answer).toBe('Adam and Christ are compared.');
 		expect(step.connection).toBe('explicit');
 	});
+	it('requires another Scripture passage for an echo and keeps its hook', () => {
+		const steps = buildGuide([
+			{ id: 'trace', title: 'Why does John reuse the beginning?', answer: 'John develops the creation language.', sourceIds: ['bible:web:john:1:1-3'] },
+			{ id: 'christ', title: 'Who is the Word in creation?', answer: 'John places the Word at the beginning.', sourceIds: ['bible:web:john:1:1-3'], connection: 'allusion' }
+		], [{ ...source('bible:web:john:1:1-3', 'scripture'), scope: 'related' }]);
+		expect(steps[2].title).toBe('Why does John reuse the beginning?');
+		expect(steps[3].answer).not.toBeNull();
+		expect(buildGuide([{ id:'trace', answer:'God brings order out of chaos.', sourceIds:['note'] }], [source('note', 'study_note')])[2].answer).toBeNull();
+	});
 });

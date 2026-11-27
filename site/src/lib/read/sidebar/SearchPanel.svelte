@@ -343,9 +343,14 @@
 		text-align: left;
 	}
 
-	.select:hover,
 	.select.open {
 		background: var(--raised);
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.select:hover {
+			background: var(--raised);
+		}
 	}
 
 	.select :global(.lead),
@@ -404,8 +409,10 @@
 		background: var(--fill);
 	}
 
-	.suggestion:hover {
-		background: var(--fill-strong);
+	@media (hover: hover) and (pointer: fine) {
+		.suggestion:hover {
+			background: var(--fill-strong);
+		}
 	}
 
 	.did {

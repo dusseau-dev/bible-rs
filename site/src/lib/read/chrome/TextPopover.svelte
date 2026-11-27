@@ -126,9 +126,11 @@
 		font-size: 15px;
 	}
 
-	.step:hover {
-		background: var(--fill);
-		box-shadow: inset 0 0 0 1px var(--ink-3);
+	@media (hover: hover) and (pointer: fine) {
+		.step:hover {
+			background: var(--fill);
+			box-shadow: inset 0 0 0 1px var(--ink-3);
+		}
 	}
 
 	.step:active {
@@ -166,9 +168,17 @@
 		color: var(--ink);
 	}
 
-	.more:hover,
 	.more:focus-visible {
 		background: var(--fill);
 		outline: none;
 	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.more:hover {
+			background: var(--fill);
+			outline: none;
+		}
+	}
+	/* Match a finger's target without enlarging the desktop popover. */
+	@media (pointer: coarse) { .step { min-width:44px; min-height:44px; } }
 </style>

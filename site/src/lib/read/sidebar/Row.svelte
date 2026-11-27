@@ -118,8 +118,10 @@
 		transition: background-color 100ms;
 	}
 
-	.row:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover {
+			background: var(--fill);
+		}
 	}
 
 	.row:active {
@@ -192,7 +194,15 @@
 		display: none;
 	}
 
-	.row:hover .chevron.hover {
-		display: grid;
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover .chevron.hover {
+			display: grid;
+		}
+	}
+	@media (pointer: coarse) {
+		.row { min-height:44px; }
+		/* A touchscreen cannot hover to discover the book expansion control. */
+		.chevron { width:44px; height:44px; }
+		.chevron.hover { display:grid; }
 	}
 </style>

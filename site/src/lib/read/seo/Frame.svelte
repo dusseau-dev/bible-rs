@@ -119,8 +119,10 @@
 		transition: background-color var(--motion-fast);
 	}
 
-	.open:hover {
-		background: var(--fill-strong);
+	@media (hover: hover) and (pointer: fine) {
+		.open:hover {
+			background: var(--fill-strong);
+		}
 	}
 
 	.open :global(svg) {
@@ -151,8 +153,10 @@
 		color: var(--ink-2);
 	}
 
-	.crumbs a:hover {
-		color: var(--accent);
+	@media (hover: hover) and (pointer: fine) {
+		.crumbs a:hover {
+			color: var(--accent);
+		}
 	}
 
 	.foot {
@@ -178,8 +182,10 @@
 		color: var(--ink-2);
 	}
 
-	.links a:hover {
-		color: var(--accent);
+	@media (hover: hover) and (pointer: fine) {
+		.links a:hover {
+			color: var(--accent);
+		}
 	}
 
 	@media (max-width: 700px) {

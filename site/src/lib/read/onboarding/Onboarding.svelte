@@ -353,7 +353,7 @@
 		text-align: left;
 	}
 
-	@media (hover: hover) {
+	@media (hover: hover) and (pointer: fine) {
 		.card:hover {
 			box-shadow:
 				0 0 0 0.5px var(--ink-3),
@@ -447,7 +447,7 @@
 		text-align: left;
 	}
 
-	@media (hover: hover) {
+	@media (hover: hover) and (pointer: fine) {
 		.preview:hover {
 			box-shadow:
 				0 0 0 0.5px var(--ink-3),

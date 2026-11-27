@@ -185,8 +185,10 @@
 		cursor: default;
 	}
 
-	.row:hover:not(.selected) {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover:not(.selected) {
+			background: var(--fill);
+		}
 	}
 
 	.row.selected {
@@ -257,8 +259,10 @@
 		font: 500 12px/16px var(--font-ui);
 	}
 
-	.add:hover:not(:disabled) {
-		background-image: linear-gradient(var(--fill), var(--fill));
+	@media (hover: hover) and (pointer: fine) {
+		.add:hover:not(:disabled) {
+			background-image: linear-gradient(var(--fill), var(--fill));
+		}
 	}
 
 	.add:disabled {

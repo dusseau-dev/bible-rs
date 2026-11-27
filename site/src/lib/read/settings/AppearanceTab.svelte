@@ -169,8 +169,10 @@
 		font: 500 13px/20px var(--font-ui);
 	}
 
-	.segment:hover:not(.on) {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.segment:hover:not(.on) {
+			background: var(--fill);
+		}
 	}
 
 	.segment.on {
@@ -207,10 +209,12 @@
 		color: #fff;
 	}
 
-	.accent:hover:not(.on) .dot {
-		box-shadow:
+	@media (hover: hover) and (pointer: fine) {
+		.accent:hover:not(.on) .dot {
+			box-shadow:
 			inset 0 0 0 0.5px rgb(255 255 255 / 0.2),
 			0 0 0 3px var(--fill-strong);
+		}
 	}
 
 	.accent.on .dot {

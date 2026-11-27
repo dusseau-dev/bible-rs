@@ -41,6 +41,13 @@ test('installs a scoped app and serves only a public offline fallback', async ({
 	});
 	await expect(page.getByRole('button', { name:'Reload to update' })).toBeVisible();
 	await expect(page).toHaveURL(/\/sign-in$/);
+	await press(page.getByRole('button', { name:'Later', exact:true }));
+	await expect(page.getByRole('button', { name:'Reload to update' })).toHaveCount(0);
+	// Deferring one release must not suppress the next worker in this open app.
+	await page.evaluate(async () => {
+		await navigator.serviceWorker.register('/service-worker.js?update-test=2', { scope:'/', type:'module', updateViaCache:'none' });
+	});
+	await expect(page.getByRole('button', { name:'Reload to update' })).toBeVisible();
 	await Promise.all([page.waitForEvent('load'), press(page.getByRole('button', { name:'Reload to update' }))]);
 	await controlled(page);
 	await expect(page.getByRole('heading', { name:'Welcome back.' })).toBeVisible();

@@ -29,9 +29,11 @@ self.addEventListener('fetch', event => {
 			// Preserve redirects and HTTP errors: an unavailable service is not an offline success.
 			return await fetch(event.request);
 		} catch {
-			const cached = await (await caches.open(CACHE)).match(OFFLINE);
-			// Cache Storage can be evicted (including on sign-out).
-			return cached ?? new Response('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connect to continue · Bible</title><h1>Connect to continue</h1><p>Your private Bible needs an internet connection to verify your session.</p><a href="/read">Try again</a></html>', {
+			try {
+				const cached = await (await caches.open(CACHE)).match(OFFLINE);
+				if (cached) return cached;
+			} catch { /* Storage can be unavailable as well as empty or evicted. */ }
+			return new Response('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connect to continue · Bible</title><h1>Connect to continue</h1><p>Your private Bible needs an internet connection to verify your session.</p><a href="/read">Try again</a></html>', {
 				status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
 			});
 		}

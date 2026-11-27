@@ -76,8 +76,10 @@
 		position: relative;
 	}
 
-	.chip:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.chip:hover {
+			background: var(--fill);
+		}
 	}
 
 	.chip:active {
@@ -98,5 +100,11 @@
 	/* A marked current chapter keeps its accent to the disc, inside the ring. */
 	.chip.here.marked {
 		background: none;
+	}
+	@media (pointer: coarse) {
+		.grid { grid-template-columns:repeat(auto-fit, minmax(44px, 1fr)); gap:4px; padding-left:16px; }
+		.chip { width:44px; height:44px; }
+		/* Preserve the 24px activity ring, centred in the larger touch target. */
+		.chip > :global(.ring) { inset:10px; }
 	}
 </style>

@@ -534,8 +534,10 @@
 		color: var(--ink);
 	}
 
-	.tool:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.tool:hover {
+			background: var(--fill);
+		}
 	}
 
 	.tool.on {
@@ -628,8 +630,10 @@
 		font: 600 12px/16px var(--font-ui);
 	}
 
-	.chip:hover {
-		background: var(--selection);
+	@media (hover: hover) and (pointer: fine) {
+		.chip:hover {
+			background: var(--selection);
+		}
 	}
 
 	.chip.add {
@@ -639,8 +643,10 @@
 		font-weight: 500;
 	}
 
-	.chip.add:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.chip.add:hover {
+			background: var(--fill);
+		}
 	}
 
 	.field-pop {

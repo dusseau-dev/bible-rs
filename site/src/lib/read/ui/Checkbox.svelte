@@ -55,8 +55,10 @@
 		box-shadow: inset 0 0 0 1px var(--border);
 	}
 
-	.checkbox:hover .box {
-		box-shadow: inset 0 0 0 1px var(--ink-3);
+	@media (hover: hover) and (pointer: fine) {
+		.checkbox:hover .box {
+			box-shadow: inset 0 0 0 1px var(--ink-3);
+		}
 	}
 
 	input:checked + .box {
@@ -82,4 +84,6 @@
 	input:checked + .box svg {
 		opacity: 1;
 	}
+	/* The whole label is the touch target; the checkbox glyph stays compact. */
+	@media (pointer: coarse) { .checkbox { min-height:44px; min-width:44px; } }
 </style>

@@ -473,7 +473,9 @@
 		transition: background-color var(--motion-fast);
 	}
 
-	.glyph:hover {
-		background: var(--accent-soft);
+	@media (hover: hover) and (pointer: fine) {
+		.glyph:hover {
+			background: var(--accent-soft);
+		}
 	}
 </style>

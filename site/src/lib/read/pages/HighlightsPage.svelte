@@ -209,9 +209,14 @@
 		text-align: left;
 	}
 
-	.select:hover,
 	.select.open {
 		background: var(--raised);
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.select:hover {
+			background: var(--raised);
+		}
 	}
 
 	.select:focus-visible {
@@ -258,10 +263,12 @@
 		cursor: default;
 	}
 
-	.card:hover {
-		box-shadow:
+	@media (hover: hover) and (pointer: fine) {
+		.card:hover {
+			box-shadow:
 			0 0 0 0.5px var(--ink-3),
 			0 1px 4px rgb(0 0 0 / 0.04);
+		}
 	}
 
 	.top {

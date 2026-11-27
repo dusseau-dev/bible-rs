@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bookContextNotes, localEvidence, passageFrom, passageVideos } from './evidence';
+import { bookContextNotes, localEvidence, noteReferences, passageFrom, passageVideos } from './evidence';
 
 describe('passage study evidence', () => {
 	it('rejects invalid and overlong selections', () => {
@@ -59,5 +59,21 @@ describe('passage study evidence', () => {
 		expect(new Set(later.sources.map((source) => source.id)).size).toBe(later.sources.length);
 		const first = await localEvidence({ book: 0, chapter: 1, firstVerse: 1, lastVerse: 1 });
 		expect(first.sources.some((source) => source.scope === 'related' && source.kind === 'study_note')).toBe(false);
+	});
+	it('loads actual public-domain Scripture for references explicitly cited by the passage notes', async () => {
+		const evidence = await localEvidence({ book:0, chapter:1, firstVerse:1, lastVerse:2 });
+		const john = evidence.sources.find(source => source.id === 'bible:web:john:1:1-3');
+		expect(john).toMatchObject({ kind:'scripture', scope:'related', location:'John 1:1–3', license:'Public domain' });
+		expect(john?.excerpt).toContain('In the beginning was the Word');
+		expect(john?.url).toBe('/read/web/john/1#v1');
+	});
+	it('bounds and deduplicates note cross-references without guessing invalid or cross-chapter ranges', async () => {
+		await localEvidence({ book:0, chapter:1, firstVerse:1, lastVerse:1 });
+		const refs = noteReferences([{ id:'refs', title:'References', from:[1,1], to:[1,1], text:'John 1:1–3; John 1:1–3; John 99:1; John 1:999; Genesis 1:2; John 1:1–2:3; Psalm 33:6; Isaiah 43:1; Isaiah 65:17.' }], { book:0, chapter:1, firstVerse:1, lastVerse:1 });
+		expect(refs).toEqual([
+			{book:42,chapter:1,firstVerse:1,lastVerse:3},
+			{book:18,chapter:33,firstVerse:6,lastVerse:6},
+			{book:22,chapter:43,firstVerse:1,lastVerse:1}
+		]);
 	});
 });

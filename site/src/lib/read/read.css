@@ -248,6 +248,9 @@ html[data-read] :where(button, [role='button'], a.follow) {
 	-webkit-touch-callout: none;
 }
 
+/* Press feedback also works on touch, where the reader's hover styles are gated. */
+html[data-read] :where(button, [role='button'], a.follow):active:not(:disabled) { opacity:.75; }
+
 @media (pointer: coarse) {
 	html[data-read] {
 		--titlebar-capsule-height: 44px;

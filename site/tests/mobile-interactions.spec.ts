@@ -64,6 +64,51 @@ test.beforeEach(async ({page, context}) => {
 });
 test.afterEach(() => expect(runtimeErrors).toEqual([]));
 
+test('sidebar navigation and chapter links provide finger-sized targets', async ({page,isMobile}) => {
+	test.skip(!isMobile, 'Touch target sizing is specific to coarse pointers.');
+	const sidebar = page.locator('aside.sidebar');
+	if (!await sidebar.evaluate(el => el.classList.contains('shown')))
+		await press(page.getByRole('main').getByRole('button', {name:/Show sidebar/}));
+	const chapter = sidebar.getByRole('link', {name:'John 2', exact:true});
+	for (const target of [sidebar.getByRole('button', {name:'Bookmarks', exact:true}), chapter]) {
+		await expect(target).toBeVisible();
+		const box = (await target.boundingBox())!;
+		expect.soft(box.height).toBeGreaterThanOrEqual(44);
+		expect.soft(box.width).toBeGreaterThanOrEqual(44);
+	}
+	await press(chapter);
+	await expect(chapter).toHaveAttribute('aria-current','true');
+});
+
+test('text controls have usable touch targets and reserve hover feedback for a mouse', async ({page,isMobile}) => {
+	if (isMobile) {
+		await press(page.getByRole('button', {name:'More', exact:true}));
+		await press(page.getByRole('menuitem', {name:/^Text & Layout/}));
+	} else await press(page.getByRole('button', {name:/^Text & layout/}));
+	const panel = page.getByRole('dialog', {name:'Text & layout', exact:true});
+	await expect(panel).toBeVisible();
+	const bigger = panel.getByRole('button', {name:'A+', exact:true});
+	const before = await bigger.evaluate(el => getComputedStyle(el).backgroundColor);
+	// Move a pointer over the control even in the touch context: capability-gated
+	// CSS must not paint a hover state on that context. Physical tap feel is separate.
+	await bigger.hover();
+	if (isMobile) {
+		expect.soft(await bigger.evaluate(el => getComputedStyle(el).backgroundColor)).toBe(before);
+		for (const target of [bigger, panel.locator('label.checkbox').first()]) {
+			const box = (await target.boundingBox())!;
+			expect.soft(box.height).toBeGreaterThanOrEqual(44);
+			expect.soft(box.width).toBeGreaterThanOrEqual(44);
+		}
+	} else await expect.poll(() => bigger.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(before);
+	const previous = await panel.locator('.pt').textContent();
+	await press(bigger);
+	await expect(panel.locator('.pt')).not.toHaveText(previous!);
+	const checkbox = panel.getByRole('checkbox', {name:'Justify paragraphs', exact:true});
+	const checked = await checkbox.isChecked();
+	await press(panel.locator('label.checkbox').filter({hasText:'Justify paragraphs'}));
+	await expect(checkbox).toBeChecked({checked:!checked});
+});
+
 test('passage toolbar, definitions, overflow destinations and recoverable errors', async ({page}) => {
 	test.setTimeout(90_000);
 	const errors:string[]=[]; page.on('pageerror', e=>errors.push(e.message));
@@ -254,6 +299,25 @@ test('search results, empty searches, comparison and parallel translation contro
 	await expect(page.locator('.results .entry button').first()).toBeVisible();
 	await press(page.getByRole('radio',{name:'New Testament',exact:true}));
 	await press(page.locator('.results .entry button').first());
+	if (isMobile) {
+		const toolbarToggle = page.getByRole('main').locator('.toggle:not(.away)').getByRole('button', {name:/Hide sidebar/});
+		await press(await toolbarToggle.count() ? toolbarToggle : page.locator('aside.sidebar').getByRole('button', {name:/Hide sidebar/}));
+	}
+	const navigation = page.getByRole('group', {name:'Search results', exact:true});
+	const next = navigation.getByRole('button', {name:'Next search result', exact:true});
+	const previous = navigation.getByRole('button', {name:'Previous search result', exact:true});
+	await expect(next).toBeVisible();
+	if (isMobile) for (const target of [next, previous]) {
+		const box = (await target.boundingBox())!;
+		expect(box.width).toBeGreaterThanOrEqual(44);
+		expect(box.height).toBeGreaterThanOrEqual(44);
+	}
+	const position = navigation.locator('[aria-live="polite"]');
+	const first = await position.textContent();
+	await press(next);
+	await expect(position).not.toHaveText(first!);
+	await press(previous);
+	await expect(position).toHaveText(first!);
 	await page.goto('/read/kjv/john/3'); await expect(page.locator('.window')).toHaveAttribute('aria-busy','false');
 	await more(page); await press(page.getByRole('menuitem',{name:/^Compare Translations/}));
 	const comparison=page.getByRole('dialog',{name:'Compare John 3:16'});
@@ -314,4 +378,119 @@ test('Ark pages expose dimensions and part controls, including the embedded view
 		await expect(page.getByRole('button',{name:'All dimensions'})).toBeVisible();
 		await press(page.getByRole('button',{name:'All dimensions'}));
 	}
+});
+
+test('passage study surfaces follow the selected reader theme', async ({page}) => {
+	test.setTimeout(90_000);
+	await page.route('**/api/study', route=>route.fulfill({json:{
+		reference:'John 3:16', passageText:'For God so loved the world.', contextText:'',
+		sources:[{id:'verse',title:'John 3:16',author:'World English Bible',license:'Public domain',kind:'scripture',scope:'direct',url:'https://ebible.org/web/JHN03.htm',excerpt:'For God so loved the world.'}],
+		terms:[], claims:[{layer:'text',text:'Read this verse alongside its chapter context.',sourceIds:['verse'],tradition:null}], papers:[], videos:[], testimonials:[],
+		guide:[],
+		answer:{text:'Read the words in their chapter context.',sourceIds:['verse']},
+		discovery:{sources:'complete',papers:'disabled',testimonials:'complete',videos:'complete'}
+	}}));
+	for (const [theme,surface,ink] of [
+		['Light','rgb(255, 255, 255)','rgb(28, 29, 33)'],
+		['Sepia','rgb(251, 245, 232)','rgb(58, 46, 34)'],
+		['Dark','rgb(38, 38, 42)','rgb(230, 227, 220)']
+	]) {
+		await page.keyboard.press('ControlOrMeta+,');
+		const settings=page.getByRole('dialog',{name:'Settings',exact:true});
+		await press(settings.getByRole('tab',{name:'Appearance',exact:true}));
+		await press(settings.getByRole('radio',{name:theme,exact:true}));
+		await press(settings.getByRole('button',{name:'Close Settings'}));
+		await more(page);
+		const toolbar=page.getByRole('dialog',{name:'Selected passage actions'});
+		const menu=page.getByRole('menu',{name:'Verse',exact:true});
+		await expect(toolbar).toHaveCSS('background-color',surface);
+		await expect(menu).toHaveCSS('background-color',surface);
+		await press(menu.getByRole('menuitem',{name:'Go deeper',exact:true}));
+		const folio=page.getByRole('dialog',{name:'Go deeper passage study'});
+		await expect(folio.locator('.item-text')).toContainText('chapter context');
+		await expect(folio).toHaveCSS('background-color',surface);
+		await expect(folio).toHaveCSS('color',ink);
+		await expect(folio.locator('.chips')).toHaveCSS('background-color',surface);
+		const active=folio.getByRole('button',{name:/^All/});
+		const activeColor=await active.evaluate(el=>getComputedStyle(el).backgroundColor);
+		await active.hover();
+		await expect(active).toHaveCSS('background-color',activeColor);
+		await press(folio.getByRole('button',{name:'Close study'}));
+		await selectVerse(page);
+		await press(toolbar.getByRole('button',{name:/^Ask/}));
+		const quick=page.getByRole('dialog',{name:'Passage ask'});
+		await expect(quick).toHaveCSS('background-color',surface);
+		await expect(quick.locator('.card')).toHaveCSS('color',ink);
+		await press(quick.getByRole('button',{name:'Close',exact:true}));
+	}
+});
+
+test('video thumbnails load, open YouTube and keep failed previews usable', async ({page,context}) => {
+	test.setTimeout(60_000);
+	await page.route('https://i.ytimg.com/vi/jQm8ElP8Kj0/hqdefault.jpg', route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><rect width="480" height="360" fill="#34516b"/></svg>'}));
+	await page.route('https://i.ytimg.com/vi/WTL3mrkoeEI/hqdefault.jpg', route=>route.fulfill({status:404,body:''}));
+	await context.route('https://www.youtube.com/watch?*',route=>route.fulfill({contentType:'text/html',body:'<title>YouTube destination</title>'}));
+	await page.route('**/api/study',route=>route.fulfill({json:{
+		reference:'John 3:16',passageText:'For God so loved the world.',contextText:'',sources:[],terms:[],claims:[],guide:[],papers:[],testimonials:[],
+		videos:[
+			{id:'jQm8ElP8Kj0',title:'Featured teaching',channel:'Teaching channel',url:'https://www.youtube.com/watch?v=jQm8ElP8Kj0',scope:'direct',verification:'video link only',durationSeconds:165,reviewed:true},
+			{id:'WTL3mrkoeEI',title:'Another teaching',channel:'Teaching channel',url:'https://www.youtube.com/watch?v=WTL3mrkoeEI',scope:'context',verification:'video link only',durationSeconds:2859,reviewed:false}
+		],discovery:{sources:'complete',papers:'complete',testimonials:'complete',videos:'complete'}
+	}}));
+	await page.keyboard.press('ControlOrMeta+,');
+	const settings=page.getByRole('dialog',{name:'Settings',exact:true});
+	await press(settings.getByRole('tab',{name:'Appearance',exact:true}));
+	await press(settings.getByRole('radio',{name:'Dark',exact:true}));
+	await press(settings.getByRole('button',{name:'Close Settings'}));
+	await more(page); await press(page.getByRole('menuitem',{name:'Sermons',exact:true}));
+	const folio=page.getByRole('dialog',{name:'Go deeper passage study'});
+	const thumbnail=folio.getByRole('link',{name:'Watch Featured teaching on YouTube (opens in a new tab)',exact:true});
+	await thumbnail.scrollIntoViewIfNeeded();
+	await expect.poll(()=>thumbnail.locator('img').evaluate((el:HTMLImageElement)=>el.complete && el.naturalWidth===480)).toBe(true);
+	await fits(thumbnail);
+	const box=(await thumbnail.boundingBox())!;
+	expect(box.width/box.height).toBeCloseTo(16/9,1);
+	const popup=context.waitForEvent('page'); await press(thumbnail);
+	const destination=await popup;
+	await expect(destination).toHaveURL('https://www.youtube.com/watch?v=jQm8ElP8Kj0');
+	await destination.close();
+	const missing=folio.getByRole('link',{name:'Watch Another teaching on YouTube (opens in a new tab)',exact:true});
+	await missing.scrollIntoViewIfNeeded();
+	await expect(missing).toContainText('Preview unavailable');
+	await expect(missing).toHaveAttribute('href','https://www.youtube.com/watch?v=WTL3mrkoeEI');
+	await expect(folio).toContainText('Teaching channel · 47:39 · Chapter context');
+	await press(folio.getByRole('button',{name:/^All/}));
+	await thumbnail.scrollIntoViewIfNeeded();
+	await expect(thumbnail.locator('img')).toBeVisible();
+});
+
+test('generated note credits are consolidated below the notes and collapsed by default', async ({page}) => {
+	await page.route('**/api/study',route=>route.fulfill({json:{
+		reference:'John 3:16',passageText:'For God so loved the world.',contextText:'',terms:[],guide:[],papers:[],testimonials:[],videos:[],
+		sources:[
+			{id:'notes',title:'Study notes',author:'Aquifer Open Study Notes · Mission Mutual',license:'CC BY-SA 4.0',kind:'study_note',scope:'context',url:'https://example.org/notes',excerpt:'A study note.'},
+			{id:'words',title:'Greek words',author:'Tyndale House Cambridge / STEPBible',license:'CC BY 4.0',kind:'study_note',scope:'context',url:'https://example.org/words',excerpt:'A language note.'}
+		],
+		claims:[
+			{layer:'language',title:'Words in context',text:'Read the words in their chapter context.',sourceIds:['notes','words'],tradition:null},
+			{layer:'interpretation',title:'A second note',text:'Compare the surrounding verses.',sourceIds:['notes','words'],tradition:null}
+		],discovery:{sources:'complete',papers:'complete',testimonials:'complete',videos:'complete'}
+	}}));
+	await more(page);await press(page.getByRole('menuitem',{name:'Go deeper',exact:true}));
+	const folio=page.getByRole('dialog',{name:'Go deeper passage study'});
+	await expect(folio.locator('.item-text')).toHaveCount(2);
+	await expect(folio.locator('.items')).not.toContainText('CC BY');
+	await expect(folio.locator('.items')).toContainText('Chapter context');
+	await expect(folio.getByRole('link',{name:/Study notes/}).first()).toBeVisible();
+	const credits=folio.locator('details.credits');
+	await expect(credits).not.toHaveAttribute('open');
+	await expect(credits.locator('li')).toHaveCount(2);
+	await expect(credits.locator('li').first()).not.toBeVisible();
+	await press(credits.locator('summary'));
+	await expect(credits.locator('li').first()).toBeVisible();
+	await expect(credits).toContainText('Aquifer Open Study Notes · Mission Mutual · CC BY-SA 4.0');
+	await expect(credits).toContainText('Tyndale House Cambridge / STEPBible · CC BY 4.0');
+	await credits.locator('summary').focus();
+	await page.keyboard.press('Space');
+	await expect(credits.locator('li').first()).not.toBeVisible();
 });

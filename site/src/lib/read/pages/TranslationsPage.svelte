@@ -301,8 +301,10 @@
 		outline: none;
 	}
 
-	.row:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover {
+			background: var(--fill);
+		}
 	}
 
 	.row.selected {
@@ -392,8 +394,10 @@
 		color: var(--ink-2);
 	}
 
-	.more:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.more:hover {
+			background: var(--fill);
+		}
 	}
 
 	.more:active {

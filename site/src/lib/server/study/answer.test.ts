@@ -6,6 +6,10 @@ const sources: StudySource[] = [
 	{ id: 'text', title: 'WEB', author: 'WEB', kind: 'scripture', tradition: null, scope: 'direct', url: '/read/web', location: 'John 3:16', license: 'Public domain', excerpt: '' },
 	{ id: 'henry', title: 'Henry', author: 'Matthew Henry', kind: 'commentary', tradition: 'protestant', scope: 'direct', url: 'https://ccel.org', location: 'John 3', license: 'Public domain', excerpt: 'Henry explains the passage in relation to the promise of eternal life.' }
 ];
+const providerResponse = (content: unknown) => new Response(JSON.stringify({
+	output_text: JSON.stringify(content), choices: [{ message: { content: JSON.stringify(content) } }]
+}));
+const keepHenry = () => providerResponse({ assessments: [{ index:0, keep:true, historical:false, sourceId:'henry', quote:sources[1].excerpt }] });
 
 describe('generated claim validation', () => {
 	afterEach(() => vi.unstubAllGlobals());
@@ -56,12 +60,12 @@ describe('generated claim validation', () => {
 	});
 
 	it('requests a non-stored structured answer and accepts only cited output', async () => {
-		const mock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+		const mock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
 			output: [{ type: 'message', content: [{ type: 'output_text', text: JSON.stringify({
 				claims: [{ layer: 'interpretation', text: 'Henry reads this as reassurance.', sourceIds: ['henry'], tradition: 'protestant' }],
 				answer: { text: 'The cited commentary reads it as reassurance.', sourceIds: ['henry'] }
 			}) }] }]
-		}), { status: 200 }));
+		}), { status: 200 })).mockResolvedValueOnce(keepHenry());
 		vi.stubGlobal('fetch', mock);
 		const out = await generateStudy({
 			passage: { book: 42, chapter: 3, firstVerse: 16, lastVerse: 16 },
@@ -76,19 +80,20 @@ describe('generated claim validation', () => {
 	});
 
 	it('uses CheaperInference Chat Completions for its API keys', async () => {
-		const mock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+		const mock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
 			choices: [{ message: { content: JSON.stringify({
 				claims: [{ layer: 'interpretation', text: 'Henry reads this as reassurance.', sourceIds: ['henry'], tradition: 'protestant' }],
 				answer: { text: 'The cited commentary reads it as reassurance.', sourceIds: ['henry'] },
 				guide: []
 			}) } }]
-		}), { status: 200 }));
+		}), { status: 200 })).mockResolvedValueOnce(keepHenry());
 		vi.stubGlobal('fetch', mock);
 		const out = await generateStudy({
 			passage: { book: 42, chapter: 3, firstVerse: 16, lastVerse: 16 },
 			contextText: '16 Public domain verse.', sources, terms: [], style: 'simple', key: 'ci_live_test'
 		});
 		expect(out.answer?.sourceIds).toEqual(['henry']);
+		expect(out.claims).toHaveLength(1);
 		expect(mock.mock.calls[0][0]).toBe('https://api.cheaperinference.com/v1/chat/completions');
 		const request = JSON.parse(mock.mock.calls[0][1].body);
 		expect(request.model).toBe('gpt-5.4-mini');
@@ -113,17 +118,17 @@ describe('history evidence verification', () => {
   vi.stubGlobal('fetch', vi.fn()
    .mockResolvedValueOnce(response({ claims, guide: [] }))
    .mockResolvedValueOnce(response({ assessments: [
-    { index: 0, historical: true, sourceId: 'note', quote: 'Cyrus ruled Persia from 559 to 530 BC.' },
-    { index: 1, historical: false, sourceId: 'note', quote: 'God remains in control of rulers and nations.' }
+    { index: 0, keep: true, historical: true, sourceId: 'note', quote: 'Cyrus ruled Persia from 559 to 530 BC.' },
+    { index: 1, keep: true, historical: false, sourceId: 'note', quote: 'God remains in control of rulers and nations.' }
    ] })));
   const out = await generateStudy({ passage: { book: 14, chapter: 1, firstVerse: 1, lastVerse: 1 }, contextText: '', sources: [note], terms: [], style: 'standard', key: 'ci_live_test' });
   expect(out.claims.map(claim => claim.text)).toEqual([claims[0].text]);
  });
  it.each([
-  [{ index: 0, historical: true, sourceId: 'note', quote: 'A quote invented by the reviewer.' }],
-  [{ index: 0, historical: true, sourceId: 'missing', quote: note.excerpt }],
-  [{ index: 0, historical: 'true', sourceId: 'note', quote: note.excerpt }],
-  [{ index: 0, historical: true, sourceId: 'note', quote: note.excerpt }, { index: 0, historical: false }],
+  [{ index: 0, keep: true, historical: true, sourceId: 'note', quote: 'A quote invented by the reviewer.' }],
+  [{ index: 0, keep: true, historical: true, sourceId: 'missing', quote: note.excerpt }],
+  [{ index: 0, keep: true, historical: 'true', sourceId: 'note', quote: note.excerpt }],
+  [{ index: 0, keep: true, historical: true, sourceId: 'note', quote: note.excerpt }, { index: 0, keep: false, historical: false }],
   []
  ].map(assessments => [assessments]))('rejects unverifiable or ambiguous history assessments: %j', async assessments => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(response({ claims: [claims[0]], guide: [] }))
@@ -133,10 +138,53 @@ describe('history evidence verification', () => {
  });
  it('shares one time budget across generation and verification', async () => {
   const fetcher = vi.fn().mockResolvedValueOnce(response({ claims: [claims[0]], guide: [] }))
-   .mockResolvedValueOnce(response({ assessments: [{ index: 0, historical: true, sourceId: 'note', quote: claims[0].text }] }));
+   .mockResolvedValueOnce(response({ assessments: [{ index: 0, keep: true, historical: true, sourceId: 'note', quote: claims[0].text }] }));
   vi.stubGlobal('fetch', fetcher);
   const out = await generateStudy({ passage: { book: 14, chapter: 1, firstVerse: 1, lastVerse: 1 }, contextText: '', sources: [note], terms: [], style: 'standard', key: 'ci_live_test' });
   expect(out.claims).toHaveLength(1);
   expect(fetcher.mock.calls[1][1].signal).toBe(fetcher.mock.calls[0][1].signal);
  });
+});
+
+describe('insight editing', () => {
+	afterEach(() => vi.unstubAllGlobals());
+	const note: StudySource = { ...sources[1], id:'note', kind:'study_note', tradition:null, excerpt:'The word elohim is plural in form, but it usually takes singular verbs. This verse provides context for the summary and the detailed creation account.' };
+	const args = { passage:{book:0,chapter:1,firstVerse:1,lastVerse:2}, contextText:'', sources:[note], terms:[], style:'standard' as const, key:'ci_live_test' };
+	it('reviews hooks and explanations together, keeping a grounded detail while dropping summary and repetition', async () => {
+		const fetcher = vi.fn().mockResolvedValueOnce(providerResponse({ claims:[
+			{layer:'language',title:'Why does a plural name take a singular verb?',text:'The plural form does not by itself determine the number of actors; the verb supplies grammatical evidence.',sourceIds:['note'],tradition:'none'},
+			{layer:'interpretation',title:'Who created the world?',text:'Genesis says that God created the world.',sourceIds:['note'],tradition:'none'}
+		],guide:[{id:'contextualize',title:'Many gods in one name?',answer:'Elohim is plural in form but takes singular verbs.',sourceIds:['note']}] }))
+		.mockResolvedValueOnce(providerResponse({assessments:[
+			{index:0,keep:true,titleSupported:true,historical:false,sourceId:'note',quote:'The word elohim is plural in form, but it usually takes singular verbs.'},
+			{index:1,keep:false,historical:false,sourceId:'',quote:''},
+			{index:3,keep:false,historical:false,sourceId:'',quote:''}
+		]}));
+		vi.stubGlobal('fetch',fetcher);
+		const out=await generateStudy(args);
+		expect(out.claims).toHaveLength(1);
+		expect(out.claims[0].title).toBe('Why does a plural name take a singular verb?');
+		expect(out.guide.every(step => !step.answer)).toBe(true);
+		const review=JSON.parse(fetcher.mock.calls[1][1].body);
+		expect(JSON.parse(review.messages[1].content).notes).toHaveLength(3);
+		expect(fetcher.mock.calls[1][1].signal).toBe(fetcher.mock.calls[0][1].signal);
+	});
+	it.each([
+		{index:0,keep:true,titleSupported:true,historical:false,sourceId:'note',quote:'A made-up source quotation of sufficient length.'},
+		{index:0,keep:'true',titleSupported:true,historical:false,sourceId:'note',quote:note.excerpt},
+		{index:0,keep:true,titleSupported:true,historical:false,sourceId:'uncited',quote:note.excerpt},
+		{index:0,keep:true,titleSupported:false,historical:false,sourceId:'note',quote:note.excerpt},
+		{index:0,keep:true,historical:false,sourceId:'note',quote:note.excerpt}
+	])('requires an unambiguous editorial decision and a real cited quote: %j', async verdict => {
+		vi.stubGlobal('fetch',vi.fn().mockResolvedValueOnce(providerResponse({claims:[{layer:'language',title:'A hook',text:'A candidate note.',sourceIds:['note']}]}))
+			.mockResolvedValueOnce(providerResponse({assessments:[verdict]})));
+		expect((await generateStudy(args)).claims).toEqual([]);
+	});
+	it('falls back to sources if independent review fails instead of publishing unchecked hooks', async () => {
+		vi.stubGlobal('fetch',vi.fn().mockResolvedValueOnce(providerResponse({claims:[{layer:'language',title:'A hook',text:'A candidate note.',sourceIds:['note']}]}))
+			.mockRejectedValueOnce(new Error('Unavailable')));
+		const out=await generateStudy(args);
+		expect(out.claims).toEqual([]);
+		expect(out.message).toContain('Source excerpts are still available');
+	});
 });

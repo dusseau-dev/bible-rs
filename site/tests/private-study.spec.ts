@@ -70,9 +70,10 @@ test('shows accurate categories, related citations and discovery states', async 
 	await expect(folio.getByText(result.sources[0].excerpt)).toHaveCount(0);
 	await expect(folio.getByText(result.guide[0].answer!)).toHaveCount(0);
 	await folio.getByRole('button', { name: /^Academic/ }).click();
-	await expect(folio.getByText(result.sources[0].excerpt)).toBeVisible();
+	await expect(folio.getByText(result.sources[0].excerpt)).toHaveCount(0);
 	await expect(folio.getByText(result.guide[0].answer!)).toBeVisible();
-	await expect(folio.getByText('Aquifer · CC BY-SA 4.0 · Related background')).toBeVisible();
+	await folio.locator('details.credits summary').click();
+	await expect(folio.getByText('Aquifer · CC BY-SA 4.0', { exact: true })).toBeVisible();
 	await expect(folio.getByText('Paper search is not enabled.')).toBeVisible();
 	await folio.getByRole('button', { name: /^Testimonials/ }).click();
 	await expect(folio.getByText('Testimonial search is temporarily unavailable.')).toBeVisible();
@@ -87,18 +88,50 @@ test('shows accurate categories, related citations and discovery states', async 
 	expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
 });
 
+test('deep research leads with a hook and reasoning, without repeating its source or generic guide summary', async ({ page }) => {
+	const explanation = 'The grammatical form and the verb must be read together. A plural noun alone cannot establish how many actors the sentence describes.';
+	await page.route('**/api/study', route => route.fulfill({ json: {
+		reference:'John 3:16',passageText:'For God so loved the world.',contextText:'',
+		sources:[{id:'note',title:'A grammatical note',author:'Aquifer',kind:'study_note',scope:'direct',tradition:null,url:'https://example.org/grammar',location:'John 3:16',license:'CC BY-SA 4.0',excerpt:'A source summary that should not appear twice.'}],
+		claims:[{layer:'interpretation',title:'Why read the noun and verb together?',text:explanation,sourceIds:['note'],tradition:null}],
+		guide:[{id:'contextualize',question:'',answer:'A generic summary of this reading.',sourceIds:['note']}],
+		terms:[],papers:[],videos:[],testimonials:[],answer:null
+	} }));
+	await page.locator('#v16 .v').first().click({button:'right'});
+	await page.getByRole('button',{name:'More passage actions'}).click();
+	await page.getByRole('menuitem',{name:/Go deeper/i}).click();
+	const folio=page.getByRole('dialog',{name:'Go deeper passage study'});
+	await expect(folio.getByRole('heading',{level:3,name:'Why read the noun and verb together?'})).toBeVisible();
+	await expect(folio.getByText(explanation,{exact:true})).toBeVisible();
+	await expect(folio.locator('.items li')).toHaveCount(1);
+	await expect(folio.getByText('A generic summary of this reading.')).toHaveCount(0);
+	await expect(folio.getByRole('link',{name:'A grammatical note'})).toHaveAttribute('href','https://example.org/grammar');
+	await folio.locator('details.credits summary').click();
+	await expect(folio.getByText('Aquifer · CC BY-SA 4.0',{exact:true})).toBeVisible();
+});
+
 test('rejects another email, retires offline caches, and revokes logout sessions', async ({ page, browser }) => {
 	const response = await page.request.post('/auth/login', { form: { email: 'other@example.com', password: 'local-test-password-only' }, headers: { origin: 'https://localhost:55141' }, maxRedirects: 0 });
 	expect(response.headers().location).toBe('/sign-in?error=invalid');
 	await page.evaluate(async () => { const cache = await caches.open('read-obsolete'); await cache.put('/read', new Response('old offline reader')); });
 	await page.reload();
 	await expect.poll(() => page.evaluate(() => caches.keys())).not.toContain('read-obsolete');
-	const state = await page.context().storageState();
-	const logout = await page.request.post('/auth/logout', { headers: { origin: 'https://localhost:55141' }, maxRedirects: 0 });
-	expect(logout.status()).toBe(303);
-	const stale = await browser.newContext({ storageState: state });
-	try { expect((await stale.request.get('https://localhost:55141/api/nlt?ref=John+3')).status()).toBe(401); } finally { await stale.close(); }
-	await page.reload(); await expect(page).toHaveURL(/\/sign-in$/);
+	// Revoke a disposable session, keeping the shared QA session usable by later
+	// browser projects without exhausting the real five-attempt login limit.
+	const disposable = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+	try {
+		const login = await disposable.request.post('https://localhost:55141/auth/login', { form: { email: 'mark@dusseauand.com', password: 'local-test-password-only' }, headers: { origin: 'https://localhost:55141' }, maxRedirects: 0 });
+		expect(login.headers().location).toBe('/read');
+		const signedIn = await disposable.newPage();
+		await signedIn.goto('https://localhost:55141/read');
+		await expect(signedIn).toHaveURL(/\/read$/);
+		const state = await disposable.storageState();
+		const logout = await disposable.request.post('https://localhost:55141/auth/logout', { headers: { origin: 'https://localhost:55141' }, maxRedirects: 0 });
+		expect(logout.status()).toBe(303);
+		const stale = await browser.newContext({ storageState: state });
+		try { expect((await stale.request.get('https://localhost:55141/api/nlt?ref=John+3')).status()).toBe(401); } finally { await stale.close(); }
+		await signedIn.reload(); await expect(signedIn).toHaveURL(/\/sign-in$/);
+	} finally { await disposable.close(); }
 });
 
 test('real Mark 6 evidence leaves History empty when AI is unavailable', async ({ page }) => {
@@ -108,7 +141,7 @@ test('real Mark 6 evidence leaves History empty when AI is unavailable', async (
  await page.getByRole('button', { name: 'More passage actions' }).click();
  await page.getByRole('menuitem', { name: /Go deeper/i }).click();
  const folio = page.getByRole('dialog', { name: 'Go deeper passage study' });
- await expect(folio.getByRole('heading', { name: 'Mark 6:14', exact: true })).toBeVisible();
+ await expect(folio.getByRole('heading', { level: 2, name: 'Mark 6:14', exact: true })).toBeVisible();
  await expect(folio.getByText('AI explanations are unavailable right now. Sources and language data are still available.')).toBeVisible();
  await folio.getByRole('button', { name: /^History/ }).click();
  await expect(folio.locator('.items li')).toHaveCount(0);

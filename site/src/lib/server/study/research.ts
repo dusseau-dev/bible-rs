@@ -52,7 +52,7 @@ export function sourcesFromExa(results: ExaResult[], p: StudyPassage): StudySour
 /** One domain-filtered search; it cannot fetch arbitrary user-provided URLs. */
 export async function discover(p: StudyPassage, apiKey: string): Promise<StudySource[]> {
 	const label = passageLabel(p);
-	const query = `${label} historical context commentary Catholic Orthodox${p.book < 39 ? ' Jewish' : ''}`;
+	const query = `${label} close reading literary structure original language translation interpretation historical context scholarly commentary`;
 	const response = await fetch('https://api.exa.ai/search', {
 		method: 'POST',
 		headers: { 'content-type': 'application/json', 'x-api-key': apiKey },

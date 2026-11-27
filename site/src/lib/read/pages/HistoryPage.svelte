@@ -297,8 +297,10 @@
 		letter-spacing: var(--type-ui-title-tracking);
 	}
 
-	.session:hover .title {
-		color: var(--accent);
+	@media (hover: hover) and (pointer: fine) {
+		.session:hover .title {
+			color: var(--accent);
+		}
 	}
 
 	.duration {

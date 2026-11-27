@@ -60,8 +60,10 @@
 		transition: background-color 100ms;
 	}
 
-	.item:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.item:hover {
+			background: var(--fill);
+		}
 	}
 
 	.item:active {
