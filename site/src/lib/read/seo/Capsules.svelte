@@ -29,8 +29,10 @@
 			color var(--motion-fast);
 	}
 
-	a:hover {
-		background: var(--fill-strong);
-		color: var(--accent);
+	@media (hover: hover) and (pointer: fine) {
+		a:hover {
+			background: var(--fill-strong);
+			color: var(--accent);
+		}
 	}
 </style>

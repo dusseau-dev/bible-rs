@@ -50,16 +50,16 @@
 </Popover>
 
 <style>
-	:global(.popover.frame.selection-toolbar) { --lens-bg:#eee8dc; --lens-fg:#292c29; --lens-mute:#7c7d72; background:var(--lens-bg); color:var(--lens-fg); padding:4px; overflow:visible; box-shadow:0 8px 24px #0003,0 0 0 1px #0001; }
+	:global(.popover.frame.selection-toolbar) { --lens-bg:var(--surface); --lens-fg:var(--ink); --lens-mute:var(--ink-2); background:var(--lens-bg); color:var(--lens-fg); padding:4px; overflow:visible; box-shadow:var(--shadow-popover); }
 	.row { display:flex; align-items:center; gap:2px; max-width:calc(100vw - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:none; }
 	.row::-webkit-scrollbar { display:none; }
 	button { display:inline-flex; flex:none; align-items:center; justify-content:center; gap:6px; min-height:32px; padding:0 10px; border-radius:9px; color:inherit; white-space:nowrap; font:500 13px/20px var(--font-ui); }
-	button:active, button.active { background:#00000012; }
-	button:focus-visible { outline:2px solid var(--lens-mute); outline-offset:-2px; background:#0000000d; }
+	button:active, button.active { background:var(--fill-strong); }
+	button:focus-visible { outline:2px solid var(--lens-mute); outline-offset:-2px; background:var(--fill); }
 	button :global(svg) { flex:none; color:var(--lens-mute); }
 	.ask { gap:8px; padding-left:12px; }
 	.caret { width:5px; height:5px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:translateY(-2px) rotate(45deg); opacity:.7; }
-	.divider { flex:none; width:1px; height:16px; background:#b4c0c24d; margin:0 3px; }
+	.divider { flex:none; width:1px; height:16px; background:var(--separator); margin:0 3px; }
 	.icon { width:32px; padding:0; }
 	.marker { position:relative; display:flex; }
 	.dot { position:absolute; bottom:-3px; right:-3px; width:7px; height:7px; border-radius:50%; box-shadow:0 0 0 2px var(--lens-bg); }
@@ -70,7 +70,7 @@
 	.clear { font-size:20px; }
 	.arrow { position:absolute; width:10px; height:10px; left:calc(50% - 5px); bottom:-4px; transform:rotate(45deg); background:var(--lens-bg); z-index:-1; }
 	:global(.selection-toolbar[data-side='bottom']) .arrow { top:-4px; bottom:auto; }
-	@media (hover:hover) and (pointer:fine) { button:hover { background:#0000000d; } button:hover :global(svg) { color:var(--lens-fg); } }
+	@media (hover:hover) and (pointer:fine) { button:hover { background:var(--fill); } button:hover :global(svg) { color:var(--lens-fg); } }
 	@media (pointer:coarse) {
 		.row { gap:0; }
 		button { padding:0 5px; gap:4px; }

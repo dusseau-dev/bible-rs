@@ -321,8 +321,10 @@
 		border-radius: 12px;
 	}
 
-	.cell:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.cell:hover {
+			background: var(--fill);
+		}
 	}
 
 	.cell.selected {
@@ -400,8 +402,10 @@
 		color: var(--on-accent);
 	}
 
-	.tick:hover {
-		box-shadow: inset 0 0 0 1px var(--ink-3);
+	@media (hover: hover) and (pointer: fine) {
+		.tick:hover {
+			box-shadow: inset 0 0 0 1px var(--ink-3);
+		}
 	}
 
 	.tick.on {

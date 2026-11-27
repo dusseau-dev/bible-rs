@@ -9,14 +9,9 @@
 
 	const app = getApp();
 	const position = $derived(app.search.position);
-
-	function step(e: MouseEvent) {
-		const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-		app.dispatch({ type: 'searchStep', delta: e.clientY < r.top + r.height / 2 ? -1 : 1 });
-	}
 </script>
 
-<!-- While a search has results: "Result 5 of 7", a stepper and a hint, floating over the top of the
+<!-- While a search has results: "Result 5 of 7", direction controls and a hint, floating over the top of the
      text. -->
 {#if position}
 	<div class="navigator" style:top="{top + PAGE_TOP}px">
@@ -25,11 +20,20 @@
 			<button
 				type="button"
 				class="stepper"
-				title="Previous / next result (↑ ↓ in the search field)"
-				aria-label="Previous or next result"
-				onclick={step}
+				title="Previous result (↑ in the search field)"
+				aria-label="Previous search result"
+				onclick={() => app.dispatch({ type: 'searchStep', delta: -1 })}
 			>
-				<Icon name="chevrons-up-down" size={14} heavy />
+				<Icon name="chevron-up" size={14} heavy />
+			</button>
+			<button
+				type="button"
+				class="stepper"
+				title="Next result (↓ in the search field)"
+				aria-label="Next search result"
+				onclick={() => app.dispatch({ type: 'searchStep', delta: 1 })}
+			>
+				<Icon name="chevron-down" size={14} heavy />
 			</button>
 			<span class="divider"></span>
 			<span class="hint">Esc to clear</span>
@@ -69,12 +73,19 @@
 		color: var(--ink-2);
 	}
 
-	.stepper:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.stepper:hover {
+			background: var(--fill);
+		}
 	}
 
 	.stepper:active {
 		background: var(--fill-strong);
+	}
+
+	/* Each direction needs a full finger-sized target, not half of one button. */
+	@media (pointer: coarse) {
+		.stepper { min-width:44px; min-height:44px; margin-left:4px; }
 	}
 
 	.divider {

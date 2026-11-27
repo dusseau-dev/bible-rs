@@ -46,8 +46,10 @@
 		transition: box-shadow var(--motion-fast);
 	}
 
-	.field:hover {
-		box-shadow: inset 0 0 0 1px var(--ink-3);
+	@media (hover: hover) and (pointer: fine) {
+		.field:hover {
+			box-shadow: inset 0 0 0 1px var(--ink-3);
+		}
 	}
 
 	.field:focus-within {

@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { pwa, updateApp } from './pwa.svelte';
-	let dismissed = $state(false);
+	// "Later" applies to this worker, not every future release in the open app.
+	let dismissed = $state<ServiceWorker | null>(null);
 </script>
 
-{#if pwa.waiting && !dismissed}
+{#if pwa.waiting && pwa.waiting !== dismissed}
 	<aside aria-label="App update" class="update">
 		<p>A Bible update is ready. Finish editing before reloading.</p>
-		<div><button type="button" onclick={updateApp} disabled={pwa.updating}>{pwa.updating ? 'Updating…' : 'Reload to update'}</button><button type="button" onclick={() => dismissed = true}>Later</button></div>
+		{#if pwa.updateError}<p role="status">{pwa.updateError}</p>{/if}
+		<div><button type="button" onclick={updateApp} disabled={pwa.updating}>{pwa.updating ? 'Updating…' : 'Reload to update'}</button><button type="button" onclick={() => dismissed = pwa.waiting} disabled={pwa.updating}>Later</button></div>
 	</aside>
 {/if}
 

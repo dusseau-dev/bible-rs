@@ -118,12 +118,16 @@
 		content: '';
 	}
 
-	.row:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover {
+			background: var(--fill);
+		}
 	}
 
-	.row:hover::after {
-		display: none;
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover::after {
+			display: none;
+		}
 	}
 
 	.row:active {
@@ -189,14 +193,24 @@
 		gap: 2px;
 	}
 
-	.row:hover .tools,
 	.row:focus-within .tools {
 		display: flex;
 	}
 
-	.row:hover .date,
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover .tools {
+			display: flex;
+		}
+	}
+
 	.row:focus-within .date {
 		display: none;
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover .date {
+			display: none;
+		}
 	}
 	@media (pointer:coarse) {
 		.row { padding-bottom:58px; }

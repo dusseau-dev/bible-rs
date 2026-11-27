@@ -1,5 +1,5 @@
 import { historyTopicLabel } from './history-topics';
-import type { EvidenceScope, StudyResult } from './study';
+import type { EvidenceScope, StudyResult, StudyVideo } from './study';
 
 export const categories = [
 	{ id: 'history', label: 'History' },
@@ -12,7 +12,7 @@ export const categories = [
 export type Category = (typeof categories)[number]['id'];
 type Link = { title: string; url: string };
 /** One thing worth noting, filed under one category with a more specific kind. */
-type Item = { category: Category; kind: string; title?: string; text: string; meta?: string; attribution?: string; links: Link[]; scope: EvidenceScope };
+type Item = { category: Category; kind: string; title?: string; text: string; meta?: string; attribution?: string; links: Link[]; scope: EvidenceScope; video?: StudyVideo };
 
 const videoTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 const clip = (text: string) => (text.length > 260 ? `${text.slice(0, 257).trimEnd()}…` : text);
@@ -79,7 +79,7 @@ export function itemsFrom(r: StudyResult): Item[] {
 	for (const story of r.testimonials)
 		add({ category: 'testimonials', kind: story.theme ? capitalized(story.theme) : 'Story', text: story.title, meta: [story.author, scopeNote[story.scope]].filter(Boolean).join(' · '), links: [{ title: 'Read on the forum', url: story.url }], scope: story.scope });
 	for (const video of r.videos)
-		add({ category: 'videos', kind: video.reviewed ? 'Curated' : 'YouTube search', text: video.title, meta: [video.channel, video.durationSeconds ? videoTime(video.durationSeconds) : '', scopeNote[video.scope]].filter(Boolean).join(' · '), links: [{ title: 'Watch on YouTube', url: video.url }], scope: video.scope });
+		add({ category: 'videos', kind: video.reviewed ? 'Curated' : 'YouTube search', text: video.title, meta: [video.channel, video.durationSeconds ? videoTime(video.durationSeconds) : '', scopeNote[video.scope]].filter(Boolean).join(' · '), links: [{ title: 'Watch on YouTube', url: video.url }], scope: video.scope, video });
 	const unique = new Map<string, Item>();
 	for (const item of items) {
 		const key = item.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();

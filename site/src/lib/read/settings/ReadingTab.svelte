@@ -236,10 +236,12 @@
 		transition: box-shadow var(--motion-fast);
 	}
 
-	.theme:hover:not(.on) .card {
-		box-shadow:
+	@media (hover: hover) and (pointer: fine) {
+		.theme:hover:not(.on) .card {
+			box-shadow:
 			0 0 0 0.5px var(--border),
 			0 0 0 3px var(--fill-strong);
+		}
 	}
 
 	.theme.on .card {

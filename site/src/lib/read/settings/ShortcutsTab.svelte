@@ -115,8 +115,10 @@
 		border-radius: 8px;
 	}
 
-	.change:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.change:hover {
+			background: var(--fill);
+		}
 	}
 
 	.none {

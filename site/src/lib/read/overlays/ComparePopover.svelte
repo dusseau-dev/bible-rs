@@ -197,8 +197,10 @@
 		text-align: left;
 	}
 
-	.row:hover:not(.current) {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover:not(.current) {
+			background: var(--fill);
+		}
 	}
 
 	.row.current {

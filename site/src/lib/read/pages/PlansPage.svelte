@@ -608,8 +608,10 @@
 			0 1px 4px rgb(0 0 0 / 0.04);
 	}
 
-	.card:hover {
-		box-shadow: var(--shadow-popover);
+	@media (hover: hover) and (pointer: fine) {
+		.card:hover {
+			box-shadow: var(--shadow-popover);
+		}
 	}
 
 	.tile {

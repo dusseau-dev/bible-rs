@@ -86,3 +86,15 @@ it('keeps a validated Scripture-only guide answer outside History', async () => 
  expect(items.find(item => item.text === 'This narrative teaches obedience to God.')?.category).toBe('academic');
  expect(items.filter(item => item.category === 'history')).toEqual([]);
 });
+
+it('retains thumbnail metadata for curated and discovered videos', () => {
+ const videos: StudyResult['videos'] = [true, false].map((reviewed, i) => ({
+  id: i ? 'WTL3mrkoeEI' : 'jQm8ElP8Kj0', title: `Teaching ${i}`, channel:'Bible teaching',
+  url:`https://www.youtube.com/watch?v=${i ? 'WTL3mrkoeEI' : 'jQm8ElP8Kj0'}`,
+  scope:'context', verification:'video link only', durationSeconds:165, reviewed
+ }));
+ const items=itemsFrom(result({sources:[],videos}));
+ expect(items.map(item=>item.video)).toEqual(videos);
+ expect(items.map(item=>item.kind)).toEqual(['Curated','YouTube search']);
+ expect(items.every(item=>item.meta==='Bible teaching · 2:45 · Chapter context')).toBe(true);
+});

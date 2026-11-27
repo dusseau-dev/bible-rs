@@ -350,8 +350,10 @@
 		box-shadow: 0 0 0 0.5px var(--border);
 	}
 
-	.style:hover:not(.on) .frame {
-		box-shadow: 0 0 0 0.5px var(--ink-3);
+	@media (hover: hover) and (pointer: fine) {
+		.style:hover:not(.on) .frame {
+			box-shadow: 0 0 0 0.5px var(--ink-3);
+		}
 	}
 
 	.style.on .frame {

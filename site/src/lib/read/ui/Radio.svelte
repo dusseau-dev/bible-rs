@@ -46,8 +46,10 @@
 		box-shadow: inset 0 0 0 1px var(--border);
 	}
 
-	.radio:hover .dot {
-		box-shadow: inset 0 0 0 1px var(--ink-3);
+	@media (hover: hover) and (pointer: fine) {
+		.radio:hover .dot {
+			box-shadow: inset 0 0 0 1px var(--ink-3);
+		}
 	}
 
 	input:checked + .dot {
@@ -59,4 +61,5 @@
 		outline: var(--focus-ring-width) solid var(--focus);
 		outline-offset: 1px;
 	}
+	@media (pointer: coarse) { .radio { min-height:44px; min-width:44px; } }
 </style>

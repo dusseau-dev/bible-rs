@@ -454,8 +454,10 @@
 		height: 48px;
 	}
 
-	.row:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.row:hover {
+			background: var(--fill);
+		}
 	}
 
 	.row.selected {

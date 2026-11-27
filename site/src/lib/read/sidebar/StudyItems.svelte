@@ -152,8 +152,10 @@
 		font: 600 11px/20px var(--font-ui);
 	}
 
-	.all:hover:not(.on) {
-		background: var(--fill-strong);
+	@media (hover: hover) and (pointer: fine) {
+		.all:hover:not(.on) {
+			background: var(--fill-strong);
+		}
 	}
 
 	.all.on {
@@ -178,8 +180,10 @@
 		border-radius: 50%;
 	}
 
-	.swatch:hover:not(.on)::before {
-		background: var(--fill-strong);
+	@media (hover: hover) and (pointer: fine) {
+		.swatch:hover:not(.on)::before {
+			background: var(--fill-strong);
+		}
 	}
 
 	.swatch.on::before {
@@ -206,7 +210,9 @@
 		text-align: left;
 	}
 
-	.more:hover {
-		background: var(--fill);
+	@media (hover: hover) and (pointer: fine) {
+		.more:hover {
+			background: var(--fill);
+		}
 	}
 </style>

@@ -53,9 +53,11 @@
 		text-wrap: pretty;
 	}
 
-	.credit a:hover {
-		color: var(--ink-2);
-		text-decoration: underline;
+	@media (hover: hover) and (pointer: fine) {
+		.credit a:hover {
+			color: var(--ink-2);
+			text-decoration: underline;
+		}
 	}
 
 	.turns {

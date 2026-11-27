@@ -8,6 +8,7 @@ export const pwa = $state({
 	prompt: null as InstallPrompt | null,
 	waiting: null as ServiceWorker | null,
 	updating: false,
+	updateError: '',
 	error: ''
 });
 
@@ -55,8 +56,13 @@ export async function installApp() {
 
 export function updateApp() {
 	if (!pwa.waiting) return;
+	pwa.updateError = '';
 	pwa.updating = true;
 	// Another open tab may have activated this update while the notice was visible.
 	if (pwa.waiting.state !== 'installed') { location.reload(); return; }
-	pwa.waiting.postMessage({ type: 'SKIP_WAITING' });
+	try { pwa.waiting.postMessage({ type: 'SKIP_WAITING' }); }
+	catch {
+		pwa.updating = false;
+		pwa.updateError = 'The update could not start. Please try again.';
+	}
 }

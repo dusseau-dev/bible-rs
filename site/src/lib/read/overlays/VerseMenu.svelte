@@ -112,7 +112,7 @@
 </Menu>
 
 <style>
-	:global(.popover.menu.selection-overflow) { --surface:#eee8dc; --ink:#292c29; --ink-2:#64665d; --ink-3:#64665d; --separator:#d6d1c4; --fill:#ded8cb; --fill-strong:#d3cdbf; background:#eee8dc; border:1px solid #d6d1c4; border-radius:16px; max-height:min(540px,60dvh,var(--visual-height,100dvh)); z-index:61; }
+	:global(.popover.menu.selection-overflow) { --ink-3:var(--ink-2); background:var(--surface); border:1px solid var(--border); border-radius:16px; max-height:min(540px,60dvh,var(--visual-height,100dvh)); z-index:61; }
 	:global(.selection-overflow .item:focus .description), :global(.selection-overflow .item:focus .shortcut) { color:var(--ink); }
 	/* 20 pt swatches 10 apart, 6 above and 8 below, from the text column. */
 	.swatches {
@@ -148,9 +148,11 @@
 		z-index: -1;
 	}
 
-	.swatch:hover:not(.on)::before,
-	.clear:hover::before {
-		background: var(--fill-strong);
+	@media (hover: hover) and (pointer: fine) {
+		.swatch:hover:not(.on)::before,
+		.clear:hover::before {
+			background: var(--fill-strong);
+		}
 	}
 
 	.swatch.on::before {

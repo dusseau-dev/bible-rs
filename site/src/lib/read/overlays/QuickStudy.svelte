@@ -93,27 +93,27 @@
 </Popover>
 
 <style>
-	:global(.quick-study) { background:#fffdf7 !important; border:1px solid #d6d1c4; box-shadow:0 15px 34px #0002; }
-	.card { width:min(560px,calc(100vw - 32px)); max-height:min(70dvh,650px); overflow:auto; padding:18px; color:#263442; }
+	:global(.popover.frame.quick-study) { background:var(--surface); border:1px solid var(--border); box-shadow:var(--shadow-popover); }
+	.card { width:min(560px,calc(100vw - 32px)); max-height:min(70dvh,650px); overflow:auto; padding:18px; color:var(--ink); }
 	.card { overscroll-behavior:contain; }
-	.head { display:flex; justify-content:space-between; align-items:center; gap:12px; font:18px Georgia,serif; }
-	.head .close { display:grid; place-items:center; width:32px; height:32px; color:#52616a; border-radius:8px; }
-	.head .close:active { background:#f0eee7; }
-	.actions { display:flex; gap:16px; overflow-x:auto; border-bottom:1px solid #ddd8cd; margin:10px 0 14px; scrollbar-width:none; }
+	.head { display:flex; justify-content:space-between; align-items:center; gap:12px; font:18px var(--font-reading); }
+	.head .close { display:grid; place-items:center; width:32px; height:32px; color:var(--ink-2); border-radius:8px; }
+	.head .close:active { background:var(--fill); }
+	.actions { display:flex; gap:16px; overflow-x:auto; border-bottom:1px solid var(--separator); margin:10px 0 14px; scrollbar-width:none; }
 	.actions::-webkit-scrollbar { display:none; }
-	.actions button { flex:none; min-height:40px; border-bottom:2px solid transparent; color:#52616a; font-size:12px; white-space:nowrap; }
-	.actions button.active { color:#264c46; }
-	@media (hover:hover) and (pointer:fine) { .head .close:hover { background:#f0eee7; } .actions button:hover { color:#264c46; } }
-	.actions button.active { border-bottom-color:#396e61; font-weight:700; }
+	.actions button { flex:none; min-height:40px; border-bottom:2px solid transparent; color:var(--ink-2); font-size:12px; white-space:nowrap; }
+	.actions button.active { color:var(--accent); }
+	@media (hover:hover) and (pointer:fine) { .head .close:hover { background:var(--fill); } .actions button:hover { color:var(--accent); } }
+	.actions button.active { border-bottom-color:var(--accent); font-weight:700; }
 	form { display:flex; gap:8px; }
-	form input { min-height:44px; flex:1; min-width:0; padding:9px 12px; border:1px solid #c9cec7; border-radius:9px; background:white; color:#263442; font:14px Arial,sans-serif; }
-	.submit { min-width:58px; border-radius:9px; background:#263a46; color:white; font-size:13px; font-weight:700; }
+	form input { min-height:44px; flex:1; min-width:0; padding:9px 12px; border:1px solid var(--border); border-radius:9px; background:var(--field); color:var(--ink); font:14px var(--font-ui); }
+	.submit { min-width:58px; border-radius:9px; background:var(--accent); color:var(--on-accent); font-size:13px; font-weight:700; }
 	.submit:disabled { opacity:.5; }
 	.citations { display:flex; flex-wrap:wrap; gap:8px; }
-	.source-note,.message { color:#596a70; font-size:12px; font-weight:400; }
-	.answer { font:15px/1.55 Georgia,serif; }
-	.citations a { display:inline-flex; align-items:center; gap:3px; color:#365e56; font-size:11px; }
-	.error { color:#9d3e35; }
+	.source-note,.message { color:var(--ink-2); font-size:12px; font-weight:400; }
+	.answer { font:15px/1.55 var(--font-reading); }
+	.citations a { display:inline-flex; align-items:center; gap:3px; color:var(--accent); font-size:11px; }
+	.error { color:var(--danger); }
 	@media (pointer:coarse) { .head .close, .actions button, .submit { min-height:44px; min-width:44px; } }
 	@media (max-width:600px) { :global(.quick-study) { left:max(8px,env(safe-area-inset-left)) !important; right:max(8px,env(safe-area-inset-right)) !important; top:auto !important; bottom:calc(var(--keyboard-inset, 0px) + max(8px,env(safe-area-inset-bottom))) !important; border-radius:20px !important; } .card { width:auto; max-height:calc(var(--visual-height, 100dvh) - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); } form { flex-direction:column; } .submit { align-self:flex-start; min-width:92px; min-height:44px; } }
 </style>

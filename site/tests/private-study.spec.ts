@@ -72,6 +72,7 @@ test('shows accurate categories, related citations and discovery states', async 
 	await folio.getByRole('button', { name: /^Academic/ }).click();
 	await expect(folio.getByText(result.sources[0].excerpt)).toHaveCount(0);
 	await expect(folio.getByText(result.guide[0].answer!)).toBeVisible();
+	await folio.locator('details.credits summary').click();
 	await expect(folio.getByText('Aquifer · CC BY-SA 4.0', { exact: true })).toBeVisible();
 	await expect(folio.getByText('Paper search is not enabled.')).toBeVisible();
 	await folio.getByRole('button', { name: /^Testimonials/ }).click();
@@ -105,6 +106,7 @@ test('deep research leads with a hook and reasoning, without repeating its sourc
 	await expect(folio.locator('.items li')).toHaveCount(1);
 	await expect(folio.getByText('A generic summary of this reading.')).toHaveCount(0);
 	await expect(folio.getByRole('link',{name:'A grammatical note'})).toHaveAttribute('href','https://example.org/grammar');
+	await folio.locator('details.credits summary').click();
 	await expect(folio.getByText('Aquifer · CC BY-SA 4.0',{exact:true})).toBeVisible();
 });
 
@@ -114,12 +116,22 @@ test('rejects another email, retires offline caches, and revokes logout sessions
 	await page.evaluate(async () => { const cache = await caches.open('read-obsolete'); await cache.put('/read', new Response('old offline reader')); });
 	await page.reload();
 	await expect.poll(() => page.evaluate(() => caches.keys())).not.toContain('read-obsolete');
-	const state = await page.context().storageState();
-	const logout = await page.request.post('/auth/logout', { headers: { origin: 'https://localhost:55141' }, maxRedirects: 0 });
-	expect(logout.status()).toBe(303);
-	const stale = await browser.newContext({ storageState: state });
-	try { expect((await stale.request.get('https://localhost:55141/api/nlt?ref=John+3')).status()).toBe(401); } finally { await stale.close(); }
-	await page.reload(); await expect(page).toHaveURL(/\/sign-in$/);
+	// Revoke a disposable session, keeping the shared QA session usable by later
+	// browser projects without exhausting the real five-attempt login limit.
+	const disposable = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+	try {
+		const login = await disposable.request.post('https://localhost:55141/auth/login', { form: { email: 'mark@dusseauand.com', password: 'local-test-password-only' }, headers: { origin: 'https://localhost:55141' }, maxRedirects: 0 });
+		expect(login.headers().location).toBe('/read');
+		const signedIn = await disposable.newPage();
+		await signedIn.goto('https://localhost:55141/read');
+		await expect(signedIn).toHaveURL(/\/read$/);
+		const state = await disposable.storageState();
+		const logout = await disposable.request.post('https://localhost:55141/auth/logout', { headers: { origin: 'https://localhost:55141' }, maxRedirects: 0 });
+		expect(logout.status()).toBe(303);
+		const stale = await browser.newContext({ storageState: state });
+		try { expect((await stale.request.get('https://localhost:55141/api/nlt?ref=John+3')).status()).toBe(401); } finally { await stale.close(); }
+		await signedIn.reload(); await expect(signedIn).toHaveURL(/\/sign-in$/);
+	} finally { await disposable.close(); }
 });
 
 test('real Mark 6 evidence leaves History empty when AI is unavailable', async ({ page }) => {

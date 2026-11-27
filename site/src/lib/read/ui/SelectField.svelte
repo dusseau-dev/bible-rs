@@ -55,8 +55,10 @@
 		font: var(--type-ui);
 	}
 
-	.select:hover {
-		background: var(--raised);
+	@media (hover: hover) and (pointer: fine) {
+		.select:hover {
+			background: var(--raised);
+		}
 	}
 
 	.select:focus-within {
@@ -85,4 +87,5 @@
 		opacity: 0;
 		font: var(--type-ui);
 	}
+	@media (pointer: coarse) { .select { min-height:44px; } }
 </style>
