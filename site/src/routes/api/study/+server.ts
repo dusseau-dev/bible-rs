@@ -13,7 +13,8 @@ import { discover } from '#lib/server/study/research.js';
 import { buildGuide } from '#lib/server/study/guide.js';
 import { discoverTestimonials, mergeTestimonials, reviewedTestimonials } from '#lib/server/study/community.js';
 import { passagePapers, reviewedPapers } from '#lib/server/study/academic.js';
-import { discoverPassageVideos, mergeVideos } from '#lib/server/study/youtube.js';
+import { mergeVideos } from '#lib/server/study/youtube.js';
+import { discoverShorts } from '#lib/server/study/shorts.js';
 
 export const prerender = false;
 export const config = { maxDuration: 90 };
@@ -82,7 +83,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, url, loc
 		searchExa && input.mode !== 'open' ? discover(passage, exaKey!).then(items => ({ items, status: 'complete' as const })) : Promise.resolve<DiscoveryResult<StudySource>>({ items: [], status: exaPermission as Exclude<typeof exaPermission, 'allowed'> }),
 		exaKey ? discoverTestimonials(passage, local.passageText, exaKey, exaPermission, serverAiKey) : Promise.resolve<DiscoveryResult<StudyTestimonial>>({ items: [], status: 'disabled' }),
 		passagePapers(passage, process.env.OPENALEX_API_KEY?.trim(), client),
-		discoverPassageVideos(passage, youtubeKey, client)
+		discoverShorts(passage, youtubeKey, client, searchExa ? exaKey : undefined)
 	]);
 	if (verified.status === 'fulfilled') result.videos = verified.value;
 	if (research.status === 'fulfilled') { result.sources.push(...research.value.items); discovery.sources = research.value.status; }

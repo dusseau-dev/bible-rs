@@ -87,15 +87,15 @@ it('keeps a validated Scripture-only guide answer outside History', async () => 
  expect(items.filter(item => item.category === 'history')).toEqual([]);
 });
 
-it('retains thumbnail metadata for curated and discovered videos', () => {
- const videos: StudyResult['videos'] = [true, false].map((reviewed, i) => ({
-  id: i ? 'WTL3mrkoeEI' : 'jQm8ElP8Kj0', title: `Teaching ${i}`, channel:'Bible teaching',
-  url:`https://www.youtube.com/watch?v=${i ? 'WTL3mrkoeEI' : 'jQm8ElP8Kj0'}`,
-  scope:'context', verification:'video link only', durationSeconds:165, reviewed
+it('labels shorts by platform and keeps their metadata', () => {
+ const videos: StudyResult['videos'] = (['youtube', 'tiktok', 'instagram'] as const).map((platform, i) => ({
+  id: ['jQm8ElP8Kj0', '7312345678901234567', 'C1a2b3c4d5'][i], platform, title: `Teaching ${i}`, channel:'Bible teaching',
+  url:`https://example.com/${i}`, scope:'context', verification:'video link only', durationSeconds:165, reviewed: !i
  }));
  const items=itemsFrom(result({sources:[],videos}));
  expect(items.map(item=>item.video)).toEqual(videos);
- expect(items.map(item=>item.kind)).toEqual(['Curated','YouTube search']);
+ expect(items.map(item=>item.kind)).toEqual(['YouTube Shorts','TikTok','Instagram Reels']);
+ expect(items.map(item=>item.links[0].title)).toEqual(['Open on YouTube','Open on TikTok','Open on Instagram']);
  expect(items.every(item=>item.meta==='Bible teaching · 2:45 · Chapter context')).toBe(true);
 });
 

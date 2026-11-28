@@ -425,16 +425,16 @@ test('passage study surfaces follow the selected reader theme', async ({page}) =
 	}
 });
 
-test('video thumbnails load, open YouTube and keep failed previews usable', async ({page,context}) => {
+test('shorts posters load, open YouTube and keep failed previews usable', async ({page,context}) => {
 	test.setTimeout(60_000);
 	await page.route('https://i.ytimg.com/vi/jQm8ElP8Kj0/hqdefault.jpg', route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><rect width="480" height="360" fill="#34516b"/></svg>'}));
 	await page.route('https://i.ytimg.com/vi/WTL3mrkoeEI/hqdefault.jpg', route=>route.fulfill({status:404,body:''}));
-	await context.route('https://www.youtube.com/watch?*',route=>route.fulfill({contentType:'text/html',body:'<title>YouTube destination</title>'}));
+	await context.route('https://www.youtube.com/shorts/**',route=>route.fulfill({contentType:'text/html',body:'<title>YouTube destination</title>'}));
 	await page.route('**/api/study',route=>route.fulfill({json:{
 		reference:'John 3:16',passageText:'For God so loved the world.',contextText:'',sources:[],terms:[],claims:[],guide:[],papers:[],testimonials:[],
 		videos:[
-			{id:'jQm8ElP8Kj0',title:'Featured teaching',channel:'Teaching channel',url:'https://www.youtube.com/watch?v=jQm8ElP8Kj0',scope:'direct',verification:'video link only',durationSeconds:165,reviewed:true},
-			{id:'WTL3mrkoeEI',title:'Another teaching',channel:'Teaching channel',url:'https://www.youtube.com/watch?v=WTL3mrkoeEI',scope:'context',verification:'video link only',durationSeconds:2859,reviewed:false}
+			{id:'jQm8ElP8Kj0',platform:'youtube',title:'Featured teaching',channel:'Teaching channel',url:'https://www.youtube.com/shorts/jQm8ElP8Kj0',scope:'direct',verification:'video link only',durationSeconds:165,reviewed:true},
+			{id:'WTL3mrkoeEI',platform:'youtube',title:'Another teaching',channel:'Teaching channel',url:'https://www.youtube.com/shorts/WTL3mrkoeEI',scope:'context',verification:'video link only',durationSeconds:120,reviewed:false}
 		],discovery:{sources:'complete',papers:'complete',testimonials:'complete',videos:'complete'}
 	}}));
 	await page.keyboard.press('ControlOrMeta+,');
@@ -444,24 +444,27 @@ test('video thumbnails load, open YouTube and keep failed previews usable', asyn
 	await press(settings.getByRole('button',{name:'Close Settings'}));
 	await more(page); await press(page.getByRole('menuitem',{name:'Sermons',exact:true}));
 	const folio=page.getByRole('dialog',{name:'Go deeper passage study'});
-	const thumbnail=folio.getByRole('link',{name:'Watch Featured teaching on YouTube (opens in a new tab)',exact:true});
-	await thumbnail.scrollIntoViewIfNeeded();
-	await expect.poll(()=>thumbnail.locator('img').evaluate((el:HTMLImageElement)=>el.complete && el.naturalWidth===480)).toBe(true);
-	await fits(thumbnail);
-	const box=(await thumbnail.boundingBox())!;
-	expect(box.width/box.height).toBeCloseTo(16/9,1);
-	const popup=context.waitForEvent('page'); await press(thumbnail);
+	const featured=folio.getByRole('article',{name:'1 of 2: Featured teaching'});
+	await expect.poll(()=>featured.locator('img').evaluate((el:HTMLImageElement)=>el.complete && el.naturalWidth===480)).toBe(true);
+	await fits(featured.locator('.card'));
+	const box=(await featured.locator('.card').boundingBox())!;
+	expect(box.height/box.width).toBeCloseTo(16/9,1);
+	const popup=context.waitForEvent('page'); await press(featured.getByRole('link',{name:'Open on YouTube (opens in a new tab)',exact:true}));
 	const destination=await popup;
-	await expect(destination).toHaveURL('https://www.youtube.com/watch?v=jQm8ElP8Kj0');
+	await expect(destination).toHaveURL('https://www.youtube.com/shorts/jQm8ElP8Kj0');
 	await destination.close();
-	const missing=folio.getByRole('link',{name:'Watch Another teaching on YouTube (opens in a new tab)',exact:true});
-	await missing.scrollIntoViewIfNeeded();
-	await expect(missing).toContainText('Preview unavailable');
-	await expect(missing).toHaveAttribute('href','https://www.youtube.com/watch?v=WTL3mrkoeEI');
-	await expect(folio).toContainText('Teaching channel · 47:39 · Chapter context');
 	await press(folio.getByRole('button',{name:/^All/}));
-	await thumbnail.scrollIntoViewIfNeeded();
-	await expect(thumbnail.locator('img')).toBeVisible();
+	const shelf=folio.getByRole('region',{name:'Shorts',exact:true});
+	await expect(shelf.getByRole('button',{name:'Watch Featured teaching',exact:true}).locator('img')).toBeVisible();
+	const missing=shelf.getByRole('button',{name:'Watch Another teaching',exact:true});
+	await missing.scrollIntoViewIfNeeded();
+	await expect(missing.locator('img')).toHaveCount(0);
+	await expect(missing).toContainText('Another teaching');
+	await press(missing);
+	const fallback=folio.getByRole('article',{name:'2 of 2: Another teaching'});
+	await expect(fallback).toBeInViewport({ratio:0.9});
+	await expect(fallback).toContainText('Teaching channel · 2:00');
+	await expect(fallback.getByRole('link',{name:'Open on YouTube (opens in a new tab)',exact:true})).toHaveAttribute('href','https://www.youtube.com/shorts/WTL3mrkoeEI');
 });
 
 test('generated note credits are consolidated below the notes and collapsed by default', async ({page}) => {

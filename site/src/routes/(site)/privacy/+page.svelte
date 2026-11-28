@@ -72,7 +72,8 @@
 	<h2>Study requests</h2>
 	<p>
 		Opening passage study sends the passage reference to this server. When enabled, additional
-		sources and testimonial links are searched through Exa, video metadata through YouTube, and
+		sources, testimonial links, and TikTok and Instagram short videos are searched through Exa,
+		Shorts metadata through YouTube, TikTok video details through TikTok's public embed service, and
 		publication metadata through OpenAlex. AI explanations send the selected passage, surrounding
 		text, cited evidence, and any question you type to the configured CheaperInference or OpenAI
 		provider. Saved notes and your reading library are not included. Per-request API keys, when
@@ -81,7 +82,8 @@
 	<p>
 		Redis also stores request-limit counters and successful search metadata for up to seven days.
 		Study counters identify a request address using a daily salted hash. The publication finder retrieves metadata rather than paper bodies; deeper research can retrieve
-		bounded excerpts from approved scholarly pages. The app does not fetch video transcripts. Reviewed links can remain visible when discovery fails.
+		bounded excerpts from approved scholarly pages. The app does not fetch video transcripts. Video players load from YouTube, TikTok, or Instagram only after
+		you tap a video. Reviewed links can remain visible when discovery fails.
 	</p>
 	<p>
 		Expandable discoveries also search scholarly sources, public questions, and relevant news.

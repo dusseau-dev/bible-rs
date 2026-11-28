@@ -43,15 +43,26 @@ export interface StudyClaim {
 	tradition: Tradition;
 }
 
+/** Short-form vertical video platforms the Videos tab plays. */
+export const VIDEO_PLATFORMS = {
+	youtube: { name: 'YouTube', label: 'YouTube Shorts' },
+	tiktok: { name: 'TikTok', label: 'TikTok' },
+	instagram: { name: 'Instagram', label: 'Instagram Reels' }
+} as const;
+export type VideoPlatform = keyof typeof VIDEO_PLATFORMS;
+
+/** A vertical short of three minutes or less. */
 export interface StudyVideo {
 	id: string;
+	platform: VideoPlatform;
 	title: string;
 	channel: string;
 	url: string;
 	scope: EvidenceScope;
 	verification: 'video link only';
 	durationSeconds?: number;
-	format?: 'short' | 'full';
+	/** Poster image when the platform publishes one (TikTok oEmbed); YouTube posters derive from the ID. */
+	thumbnail?: string;
 	reviewed?: boolean;
 }
 
