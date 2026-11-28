@@ -1,5 +1,5 @@
 import { historyTopicLabel } from './history-topics';
-import { TESTIMONIAL_PLATFORMS, type EvidenceScope, type StudyResult, type StudyVideo } from './study';
+import { TESTIMONIAL_PLATFORMS, VIDEO_PLATFORMS, type EvidenceScope, type StudyResult, type StudyVideo } from './study';
 
 export const categories = [
 	{ id: 'history', label: 'History' },
@@ -14,7 +14,7 @@ type Link = { title: string; url: string };
 /** One thing worth noting, filed under one category with a more specific kind. */
 type Item = { category: Category; kind: string; title?: string; text: string; meta?: string; attribution?: string; links: Link[]; scope: EvidenceScope; video?: StudyVideo };
 
-const videoTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+export const videoTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 const clip = (text: string) => (text.length > 260 ? `${text.slice(0, 257).trimEnd()}…` : text);
 const scopeNote: Record<EvidenceScope, string | undefined> = { direct: undefined, context: 'Chapter context', related: 'Related background' };
 const scopeRank: Record<EvidenceScope, number> = { direct: 0, context: 1, related: 2 };
@@ -81,7 +81,7 @@ export function itemsFrom(r: StudyResult): Item[] {
 		add({ category: 'testimonials', kind: platform, text: story.excerpt || story.title, meta: [story.author, story.theme ? capitalized(story.theme) : scopeNote[story.scope]].filter(Boolean).join(' · '), links: [{ title: `Read on ${platform}`, url: story.url }], scope: story.scope });
 	}
 	for (const video of r.videos)
-		add({ category: 'videos', kind: video.reviewed ? 'Curated' : 'YouTube search', text: video.title, meta: [video.channel, video.durationSeconds ? videoTime(video.durationSeconds) : '', scopeNote[video.scope]].filter(Boolean).join(' · '), links: [{ title: 'Watch on YouTube', url: video.url }], scope: video.scope, video });
+		add({ category: 'videos', kind: VIDEO_PLATFORMS[video.platform].label, text: video.title, meta: [video.channel, video.durationSeconds ? videoTime(video.durationSeconds) : '', scopeNote[video.scope]].filter(Boolean).join(' · '), links: [{ title: `Open on ${VIDEO_PLATFORMS[video.platform].name}`, url: video.url }], scope: video.scope, video });
 	const unique = new Map<string, Item>();
 	for (const item of items) {
 		const key = item.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();

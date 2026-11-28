@@ -9,16 +9,23 @@ describe('YouTube passage metadata', () => {
 		expect(durationSeconds('PT1H2M3S')).toBe(3723);
 		expect(durationSeconds('bad')).toBeNull();
 	});
-	it('labels exact passage clips and chapter context separately', () => {
+	const vertical = { embedWidth: '360', embedHeight: '640' };
+	const item = (id: string, title: string, duration: string, player: { embedWidth?: number | string; embedHeight?: number | string } = vertical) =>
+		({ id, snippet: { title, channelTitle: 'Example' }, contentDetails: { duration }, status: { privacyStatus: 'public' }, player });
+	it('keeps only vertical clips of three minutes or less, linking to the Shorts player', () => {
 		const videos = videosFromYoutube([
-			{ id: 'abcdefghijk', snippet: { title: 'Genesis 3:7 explained', channelTitle: 'Example' }, contentDetails: { duration: 'PT2M' }, status: { privacyStatus: 'public' } },
-			{ id: 'lmnopqrstuv', snippet: { title: 'Genesis 3 study', channelTitle: 'Example' }, contentDetails: { duration: 'PT34M' }, status: { privacyStatus: 'public' } },
-			{ id: '12345678901', snippet: { title: 'Genesis 30 story' }, contentDetails: { duration: 'PT25M' }, status: { privacyStatus: 'public' } }
+			item('abcdefghijk', 'Genesis 3:7 explained', 'PT2M'),
+			item('lmnopqrstuv', 'Genesis 3 study', 'PT3M'),
+			item('wide0000001', 'Genesis 3:7 landscape clip', 'PT1M', { embedWidth: 640, embedHeight: 360 }),
+			item('long0000001', 'Genesis 3:7 sermon', 'PT3M1S'),
+			item('nosize00001', 'Genesis 3:7 unknown size', 'PT1M', {}),
+			item('12345678901', 'Genesis 30 story', 'PT1M')
 		], genesis);
-		expect(videos.map((video) => [video.scope, video.format])).toEqual([['direct', 'short'], ['context', 'full']]);
+		expect(videos.map((video) => [video.id, video.scope, video.platform])).toEqual([['abcdefghijk', 'direct', 'youtube'], ['lmnopqrstuv', 'context', 'youtube']]);
+		expect(videos[0].url).toBe('https://www.youtube.com/shorts/abcdefghijk');
 	});
 	it('keeps reviewed links when discovery duplicates an ID', () => {
-		const reviewed = { id: 'abcdefghijk', title: 'Reviewed', channel: 'Example', url: 'https://www.youtube.com/watch?v=abcdefghijk', scope: 'direct' as const, verification: 'video link only' as const };
+		const reviewed = { id: 'abcdefghijk', platform: 'youtube' as const, title: 'Reviewed', channel: 'Example', url: 'https://www.youtube.com/shorts/abcdefghijk', scope: 'direct' as const, verification: 'video link only' as const };
 		expect(mergeVideos([reviewed], [{ ...reviewed, title: 'Search result' }])[0].title).toBe('Reviewed');
 	});
 });

@@ -19,12 +19,12 @@ describe('passage study evidence', () => {
 		expect(evidence.terms.every((term) => evidence.sources.some((source) => source.id === term.sourceId))).toBe(true);
 	});
 
-	it('shows only reviewed video matches and labels them as link-only', () => {
-		const found = passageVideos({ book: 44, chapter: 8, firstVerse: 1, lastVerse: 4 });
-		expect(found).toHaveLength(2);
+	it('shows only reviewed Shorts for the passage and labels them as link-only', () => {
+		const found = passageVideos({ book: 0, chapter: 3, firstVerse: 7, lastVerse: 7 });
+		expect(found.map((video) => [video.platform, video.url, video.durationSeconds])).toEqual([['youtube', 'https://www.youtube.com/shorts/jQm8ElP8Kj0', 165]]);
 		expect(found.every((video) => video.scope === 'direct' && video.verification === 'video link only')).toBe(true);
+		expect(found[0]).not.toHaveProperty('book');
 		expect(passageVideos({ book: 42, chapter: 3, firstVerse: 16, lastVerse: 16 })).toEqual([]);
-		expect(passageVideos({ book: 0, chapter: 3, firstVerse: 7, lastVerse: 7 }).map((video) => video.format)).toEqual(['short', 'full']);
 	});
 
 	it('picks earlier-book notes that together cover the most history topics', () => {

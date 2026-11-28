@@ -6,7 +6,8 @@
 	import type { StudyResult } from '../study';
 	import { Icon } from '../ui';
 	import DiscoveryList from './DiscoveryList.svelte';
-	import VideoThumbnail from './VideoThumbnail.svelte';
+	import ShortsFeed from './ShortsFeed.svelte';
+	import ShortsShelf from './ShortsShelf.svelte';
 
 	const app = getApp();
 	const passage = $derived(app.studyPassage!);
@@ -21,8 +22,14 @@
 	const close = () => { controller?.abort(); app.studyPassage = null; };
 
 	const items = $derived(result ? itemsFrom(result) : []);
+	/** Shorts get their own feed and shelf, so the text list never carries them. */
+	const shown = $derived(items.filter((item) => !item.video && (filter === 'all' || item.category === filter)));
+	const videos = $derived(items.flatMap((item) => item.video ? [item.video] : []));
+	let startAt = $state(0);
+	/** The shorts feed fills the scroll area below the sticky chips, so a whole card is always in view. */
+	let contentHeight = $state(0);
 	let chipsHeight = $state(0);
-	const shown = $derived(filter === 'all' ? items : items.filter((item) => item.category === filter));
+	const show = (next: Category | 'all', at = 0) => { startAt = at; filter = next; };
 	const credits = $derived([...new Set(items.flatMap(item => item.attribution?.split('; ') ?? []))]);
 	const counts = $derived(result ? studyCounts(result) : null);
 	const count = (c: Category) => counts?.categories[c] ?? 0;
@@ -62,14 +69,14 @@
 		<div><h2>{result?.reference ?? 'Passage study'}</h2><p>A closer look at the words, the evidence, and what they change</p></div>
 		<button type="button" class="icon-button" aria-label="Close study" onclick={close}><Icon name="close" size={18} /></button>
 	</header>
-	<div class="content" style:--sticky-top="{chipsHeight}px">
+	<div class="content" bind:clientHeight={contentHeight} style:--sticky-top="{chipsHeight}px" style:--feed-max="{Math.max(320, contentHeight - chipsHeight - 28)}px">
 		<div class="passage-intro">
 			<blockquote class="selection-quote">{selectedQuote ?? result?.passageText ?? 'Reading the selected passage…'}</blockquote>
 			<p class="translation">{selectedQuote ? 'Selected text · current translation' : 'World English Bible · public domain'}</p>
 		</div>
 		<div class="chips" role="group" aria-label="Show category" bind:clientHeight={chipsHeight}>
-			<button type="button" class:active={filter === 'all'} aria-pressed={filter === 'all'} onclick={() => filter = 'all'}>All{#if result}<span class="count">{#if result.discoveries}{counts?.discoveries} discoveries · {counts?.resources} resources{:else}{items.length}{/if}</span>{/if}</button>
-			{#each categories as c}<button type="button" class:active={filter === c.id} class:none={result && !count(c.id)} aria-pressed={filter === c.id} onclick={() => filter = c.id}>{c.label}{#if result}<span class="count">{count(c.id)}</span>{/if}</button>{/each}
+			<button type="button" class:active={filter === 'all'} aria-pressed={filter === 'all'} onclick={() => show('all')}>All{#if result}<span class="count">{#if result.discoveries}{counts?.discoveries} discoveries · {counts?.resources} resources{:else}{items.length}{/if}</span>{/if}</button>
+			{#each categories as c}<button type="button" class:active={filter === c.id} class:none={result && !count(c.id)} aria-pressed={filter === c.id} onclick={() => show(c.id)}>{c.label}{#if result}<span class="count">{count(c.id)}</span>{/if}</button>{/each}
 		</div>
 		{#if error}<p class="alert" role="alert">{error} <button type="button" onclick={() => load()}>Retry</button></p>{/if}
 		{#if loading}<p class="loading" role="status">Reading the sources…</p>{/if}
@@ -81,12 +88,13 @@
 				<p class="research-status">Research: scholarship {result.discoveries.research.scholarship.replaceAll('_', ' ')} · questions {result.discoveries.research.questions.replaceAll('_', ' ')} · news {result.discoveries.research.news.replaceAll('_', ' ')}</p>
 			{/if}
 			{#snippet resources()}
-			{#if shown.length}
+			{#if filter === 'videos' && videos.length}
+				{#key startAt}<ShortsFeed {videos} start={startAt} />{/key}
+			{:else if shown.length || (filter === 'all' && videos.length)}
 				<ol class="items">
 					{#each shown as item}
 						<li>
 							<span class="label">{labelOf(item.category)}<span class="kind">{' · '}{item.kind}</span></span>
-							{#if item.video}{#key item.video.id}<VideoThumbnail video={item.video} />{/key}{/if}
 							{#if item.title}<h3 class="item-title">{item.title}</h3>{/if}
 							<p class="item-text">{item.text}</p>
 							{#if item.meta}<p class="meta">{item.meta}</p>{/if}
@@ -94,9 +102,10 @@
 						</li>
 					{/each}
 				</ol>
+				{#if filter === 'all' && videos.length}<ShortsShelf {videos} onopen={(i) => show('videos', i)} />{/if}
 			{:else}<p class="loading">{emptyCategory(result!, filter)}</p>{/if}
 			{/snippet}
-			{#if result.discoveries?.items.length && filter !== 'videos' && filter !== 'testimonials' && shown.length}
+			{#if result.discoveries?.items.length && filter !== 'videos' && filter !== 'testimonials' && (shown.length || (filter === 'all' && videos.length))}
 				<details class="further"><summary>Further reading ({filter === 'all' ? counts?.resources : shown.length} resources)</summary>{@render resources()}</details>
 			{:else if !result.discoveries?.items.length || filter === 'videos' || filter === 'testimonials'}{@render resources()}{/if}
 
